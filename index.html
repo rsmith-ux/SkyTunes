@@ -3,31 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mood Music Matcher</title>
+    <title>WeatherVibe Collector</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="container">
-        <header>
-            <h1>🎵 Mood Music Match</h1>
-            <p>How are you feeling today?</p>
-        </header>
+    <nav>
+        <button onclick="showPage('suggest')">Daily Suggestion</button>
+        <button onclick="showPage('collection')">My Collection</button>
+    </nav>
 
-        <section class="input-area">
-            <select id="moodSelect">
-                <option value="" disabled selected>Select a mood...</option>
-                <option value="happy">Happy & Energetic</option>
-                <option value="chill">Chill & Relaxed</option>
-                <option value="sad">Sad & Reflective</option>
-                <option value="focus">Deep Focus</option>
+    <main id="suggest-page" class="page">
+        <header>
+            <h1>Today's Vibe</h1>
+            <div id="weather-display">Fetching your weather...</div>
+        </header>
+        <section id="recommendation-area">
+            <div class="card">
+                <h2>Recommended Album</h2>
+                <div id="suggested-album">Add albums to your collection to get started!</div>
+            </div>
+        </section>
+    </main>
+
+    <main id="collection-page" class="page" style="display:none;">
+        <header>
+            <h1>My Music Vault</h1>
+        </header>
+        
+        <section class="add-album card">
+            <h3>Add New Album</h3>
+            <input type="text" id="albumTitle" placeholder="Album Title">
+            <input type="text" id="albumArtist" placeholder="Artist">
+            <select id="albumVibe">
+                <option value="Sunny">Sunny/Happy</option>
+                <option value="Rainy">Rainy/Chill</option>
+                <option value="Cloudy">Cloudy/Moody</option>
+                <option value="Snowy">Snowy/Cozy</option>
             </select>
-            <button id="matchBtn">Find My Vibe</button>
+            <button onclick="addAlbum()">Add to Collection</button>
         </section>
 
-        <section id="results" class="results-area">
+        <section id="collection-list">
             </section>
-    </div>
+    </main>
 
     <script src="script.js"></script>
 </body>
