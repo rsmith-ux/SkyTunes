@@ -1,0 +1,67 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: linear-gradient(135deg, #121212 0%, #1e1e2e 100%);
+    color: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.container {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    padding: 2rem;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+header h1 { margin-bottom: 0.5rem; letter-spacing: -1px; }
+header p { color: #b3b3b3; margin-bottom: 2rem; }
+
+select, button {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 1rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+}
+
+select { background: #333; color: white; cursor: pointer; }
+
+button {
+    background: #1db954; /* Spotify Green */
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+}
+
+button:hover { background: #1ed760; transform: translateY(-2px); }
+
+.song-card {
+    background: rgba(255, 255, 255, 0.1);
+    margin-top: 1rem;
+    padding: 1rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    animation: fadeIn 0.5s ease;
+}
+
+.song-info { margin-left: 1rem; }
+.song-info h4 { margin: 0; color: #1db954; }
+.song-info p { font-size: 0.8rem; color: #ccc; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
