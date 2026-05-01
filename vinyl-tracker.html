@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wax & Weather — Album Collection Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #161618;
+    --surface2: #1e1e21;
+    --surface3: #252528;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #f0ede8;
+    --text2: #9b9894;
+    --text3: #5e5c5a;
+    --accent: #c8a96e;
+    --accent2: #8fb89a;
+    --danger: #c47a6a;
+    --info: #7aacca;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  /* GRAIN OVERLAY */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+  }
+
+  .app { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* HEADER */
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 3rem; gap: 1rem; flex-wrap: wrap; }
+  .brand { }
+  .brand-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.4rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .brand-title span { color: var(--accent); font-style: italic; }
+  .brand-sub { font-size: 0.78rem; color: var(--text3); letter-spacing: 0.12em; text-transform: uppercase; margin-top: 0.4rem; font-family: 'DM Mono', monospace; }
+
+  /* WEATHER CARD */
+  .weather-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    min-width: 200px;
+    text-align: right;
+  }
+  .weather-main { display: flex; align-items: center; gap: 0.6rem; justify-content: flex-end; }
+  .weather-icon { font-size: 1.8rem; line-height: 1; }
+  .weather-temp { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--accent); }
+  .weather-desc { font-size: 0.78rem; color: var(--text2); margin-top: 0.25rem; text-transform: capitalize; }
+  .weather-loc { font-size: 0.7rem; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 0.15rem; }
+  .weather-loading { font-size: 0.8rem; color: var(--text3); }
+
+  /* SUGGESTION BANNER */
+  .suggestion-wrap { margin-bottom: 2.5rem; }
+  .suggestion-label {
+    font-size: 0.68rem; color: var(--text3); text-transform: uppercase;
+    letter-spacing: 0.14em; font-family: 'DM Mono', monospace; margin-bottom: 0.75rem;
+  }
+  .suggestion-banner {
+    background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    display: flex; align-items: center; gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .suggestion-mood { flex: 1; min-width: 200px; }
+  .suggestion-mood-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    font-style: italic;
+    color: var(--text2);
+    line-height: 1.5;
+    margin-bottom: 0.5rem;
+  }
+  .suggestion-albums { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .suggestion-pill {
+    background: var(--surface3);
+    border: 1px solid var(--border2);
+    border-radius: 100px;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.78rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Mono', monospace;
+  }
+  .suggestion-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .suggestion-none { font-size: 0.85rem; color: var(--text3); font-style: italic; }
+
+  /* CONTROLS */
+  .controls { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .search-wrap { flex: 1; min-width: 180px; position: relative; }
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    padding: 0.6rem 0.9rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .search-wrap input:focus { border-color: var(--border2); }
+  .search-wrap input::placeholder { color: var(--text3); }
+
+  select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    padding: 0.6rem 0.9rem;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 2rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235e5c5a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+  }
+
+  .btn {
+    background: var(--accent);
+    color: #1a1207;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 0.6rem 1.1rem;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .btn:hover { opacity: 0.88; }
+  .btn:active { transform: scale(0.98); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+
+  .count-badge {
+    font-size: 0.72rem; color: var(--text3); font-family: 'DM Mono', monospace;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 100px; padding: 0.3rem 0.7rem;
+  }
+
+  /* ADD MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    z-index: 100; display: none; align-items: center; justify-content: center;
+    padding: 1.5rem;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    padding: 2rem;
+    width: 100%; max-width: 460px;
+    animation: slideUp 0.2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.35rem; margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .form-group { margin-bottom: 1rem; }
+  .form-label { font-size: 0.73rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; font-family: 'DM Mono', monospace; display: block; margin-bottom: 0.4rem; }
+  .form-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    padding: 0.65rem 0.85rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--text3); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+  .modal-actions .btn { flex: 1; padding: 0.75rem; font-size: 0.88rem; }
+  .modal-actions .btn-ghost { flex: 0; }
+
+  .lookup-status { font-size: 0.78rem; margin-top: 0.5rem; min-height: 1.2em; font-family: 'DM Mono', monospace; }
+  .lookup-status.loading { color: var(--accent); }
+  .lookup-status.success { color: var(--accent2); }
+  .lookup-status.error { color: var(--danger); }
+
+  .lookup-result {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+    margin-top: 0.75rem;
+    display: none;
+  }
+  .lookup-result.show { display: block; }
+  .lookup-result-art { width: 60px; height: 60px; border-radius: 6px; object-fit: cover; background: var(--surface3); float: right; margin-left: 0.75rem; }
+  .lookup-result-title { font-weight: 500; font-size: 0.92rem; margin-bottom: 0.2rem; }
+  .lookup-result-artist { font-size: 0.78rem; color: var(--accent); font-family: 'DM Mono', monospace; }
+  .lookup-result-meta { font-size: 0.73rem; color: var(--text3); margin-top: 0.4rem; }
+  .clearfix::after { content: ''; display: table; clear: both; }
+
+  .similar-header { font-size: 0.7rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; font-family: 'DM Mono', monospace; margin-bottom: 0.5rem; }
+  .similar-list { display: flex; flex-direction: column; gap: 0.35rem; max-height: 220px; overflow-y: auto; }
+  .similar-list::-webkit-scrollbar { width: 4px; }
+  .similar-list::-webkit-scrollbar-track { background: transparent; }
+  .similar-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+  .similar-item {
+    display: flex; align-items: center; gap: 0.65rem;
+    background: var(--surface3); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 0.5rem 0.65rem;
+    cursor: pointer; transition: border-color 0.12s;
+  }
+  .similar-item:hover { border-color: var(--accent); }
+  .similar-item.selected { border-color: var(--accent); background: rgba(200,169,110,0.08); }
+  .similar-item-art { width: 36px; height: 36px; border-radius: 4px; object-fit: cover; background: var(--surface2); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1rem; overflow: hidden; }
+  .similar-item-art img { width: 100%; height: 100%; object-fit: cover; }
+  .similar-item-info { flex: 1; min-width: 0; }
+  .similar-item-title { font-size: 0.82rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .similar-item-artist { font-size: 0.7rem; color: var(--accent); font-family: 'DM Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .similar-item-year { font-size: 0.68rem; color: var(--text3); flex-shrink: 0; }
+  .similar-check { font-size: 0.7rem; color: var(--accent); flex-shrink: 0; opacity: 0; }
+  .similar-item.selected .similar-check { opacity: 1; }
+
+  /* ALBUM GRID */
+  .grid-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .grid-section-label { font-size: 0.68rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.14em; font-family: 'DM Mono', monospace; }
+  .view-toggle { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+  .view-btn { background: transparent; border: none; color: var(--text3); padding: 0.35rem 0.65rem; cursor: pointer; font-size: 0.8rem; transition: all 0.15s; }
+  .view-btn.active { background: var(--surface2); color: var(--text); }
+
+  .album-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+  .album-list-view { display: flex; flex-direction: column; gap: 0.4rem; }
+
+  .album-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color 0.15s, transform 0.15s;
+    position: relative;
+  }
+  .album-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .album-card.highlighted { border-color: var(--accent); }
+
+  .album-art {
+    width: 100%; aspect-ratio: 1;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    font-size: 2rem;
+    color: var(--text3);
+  }
+  .album-art img { width: 100%; height: 100%; object-fit: cover; }
+  .album-info { padding: 0.65rem 0.7rem; }
+  .album-title-text { font-size: 0.82rem; font-weight: 500; line-height: 1.3; margin-bottom: 0.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .album-artist-text { font-size: 0.72rem; color: var(--accent); font-family: 'DM Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .album-year { font-size: 0.68rem; color: var(--text3); margin-top: 0.2rem; }
+  .album-genres { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.4rem; }
+  .genre-tag { font-size: 0.6rem; background: var(--surface3); border: 1px solid var(--border); border-radius: 100px; padding: 0.1rem 0.45rem; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+  .album-delete {
+    position: absolute; top: 0.4rem; right: 0.4rem;
+    background: rgba(13,13,15,0.8); border: 1px solid var(--border);
+    border-radius: 100px; width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; opacity: 0; transition: opacity 0.15s;
+    font-size: 0.7rem; color: var(--danger);
+  }
+  .album-card:hover .album-delete { opacity: 1; }
+
+  /* LIST VIEW */
+  .album-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.65rem 1rem;
+    display: flex; align-items: center; gap: 0.75rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .album-row:hover { border-color: var(--border2); }
+  .album-row.highlighted { border-color: var(--accent); }
+  .row-art { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; background: var(--surface3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; overflow: hidden; }
+  .row-art img { width: 100%; height: 100%; object-fit: cover; }
+  .row-info { flex: 1; min-width: 0; }
+  .row-title { font-size: 0.88rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row-artist { font-size: 0.75rem; color: var(--accent); font-family: 'DM Mono', monospace; }
+  .row-meta { font-size: 0.72rem; color: var(--text3); margin-left: auto; flex-shrink: 0; text-align: right; }
+  .row-delete { background: transparent; border: none; color: var(--text3); cursor: pointer; padding: 0.25rem; transition: color 0.15s; font-size: 0.9rem; }
+  .row-delete:hover { color: var(--danger); }
+
+  /* EMPTY STATE */
+  .empty-state { text-align: center; padding: 4rem 2rem; }
+  .empty-icon { font-size: 3.5rem; margin-bottom: 1rem; opacity: 0.3; }
+  .empty-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--text2); margin-bottom: 0.5rem; }
+  .empty-sub { font-size: 0.85rem; color: var(--text3); line-height: 1.6; }
+
+  /* DETAIL DRAWER */
+  .drawer-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 90; display: none; backdrop-filter: blur(2px);
+  }
+  .drawer-overlay.open { display: block; }
+  .drawer {
+    position: fixed; right: 0; top: 0; bottom: 0;
+    width: min(380px, 100vw);
+    background: var(--surface);
+    border-left: 1px solid var(--border2);
+    z-index: 95; overflow-y: auto;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    padding: 2rem 1.5rem;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-close { background: transparent; border: 1px solid var(--border); border-radius: 100px; width: 28px; height: 28px; cursor: pointer; color: var(--text2); font-size: 0.9rem; display: flex; align-items: center; justify-content: center; float: right; margin-bottom: 1rem; }
+  .drawer-art { width: 100%; aspect-ratio: 1; border-radius: var(--radius); background: var(--surface2); margin-bottom: 1.25rem; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 4rem; color: var(--text3); }
+  .drawer-art img { width: 100%; height: 100%; object-fit: cover; }
+  .drawer-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; line-height: 1.2; margin-bottom: 0.4rem; }
+  .drawer-artist { color: var(--accent); font-family: 'DM Mono', monospace; font-size: 0.88rem; margin-bottom: 1rem; }
+  .drawer-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem; }
+  .drawer-meta-item { background: var(--surface2); border-radius: var(--radius-sm); padding: 0.65rem 0.75rem; }
+  .drawer-meta-label { font-size: 0.65rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; font-family: 'DM Mono', monospace; margin-bottom: 0.25rem; }
+  .drawer-meta-value { font-size: 0.9rem; font-weight: 500; }
+  .drawer-genres { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.25rem; }
+  .drawer-genre-tag { background: var(--surface2); border: 1px solid var(--border); border-radius: 100px; padding: 0.3rem 0.75rem; font-size: 0.75rem; color: var(--text2); font-family: 'DM Mono', monospace; }
+  .drawer-notes-label { font-size: 0.73rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; font-family: 'DM Mono', monospace; margin-bottom: 0.4rem; }
+  .drawer-notes { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.85rem; padding: 0.65rem 0.85rem; resize: vertical; min-height: 80px; outline: none; transition: border-color 0.15s; }
+  .drawer-notes:focus { border-color: var(--accent); }
+  .drawer-notes::placeholder { color: var(--text3); }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 100px; padding: 0.6rem 1.25rem;
+    font-size: 0.82rem; font-family: 'DM Mono', monospace;
+    z-index: 200; opacity: 0; transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--accent2); color: var(--accent2); }
+  .toast.error { border-color: var(--danger); color: var(--danger); }
+
+  /* RATING STARS */
+  .rating-wrap { display: flex; gap: 0.25rem; margin-top: 0.5rem; }
+  .star { cursor: pointer; font-size: 1rem; color: var(--text3); transition: color 0.1s; }
+  .star.active { color: var(--accent); }
+
+  /* LISTENED TOGGLE */
+  .listened-wrap { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; font-size: 0.82rem; color: var(--text2); }
+  .toggle-switch { width: 32px; height: 18px; background: var(--surface3); border: 1px solid var(--border); border-radius: 100px; cursor: pointer; position: relative; transition: background 0.2s; }
+  .toggle-switch.on { background: var(--accent2); border-color: var(--accent2); }
+  .toggle-knob { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; background: var(--text); border-radius: 100px; transition: transform 0.2s; }
+  .toggle-switch.on .toggle-knob { transform: translateX(14px); }
+
+  @media (max-width: 600px) {
+    .brand-title { font-size: 1.8rem; }
+    .album-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-title">Wax <span>&</span> Weather</div>
+      <div class="brand-sub">Album Collection Tracker</div>
+    </div>
+    <div class="weather-card" id="weatherCard">
+      <div class="weather-loading">Detecting location…</div>
+    </div>
+  </div>
+
+  <!-- SUGGESTION BANNER -->
+  <div class="suggestion-wrap">
+    <div class="suggestion-label">▸ Suggested for the mood</div>
+    <div class="suggestion-banner" id="suggestionBanner">
+      <div class="suggestion-mood">
+        <div class="suggestion-mood-text" id="moodText">Loading weather to suggest albums…</div>
+        <div class="suggestion-albums" id="suggestionAlbums"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="search-wrap">
+      <input type="text" id="searchInput" placeholder="Search your collection…" oninput="filterCollection()">
+    </div>
+    <select id="sortSelect" onchange="filterCollection()">
+      <option value="added">Recently added</option>
+      <option value="artist">Artist A–Z</option>
+      <option value="title">Title A–Z</option>
+      <option value="year">Year</option>
+      <option value="rating">Rating</option>
+    </select>
+    <select id="genreFilter" onchange="filterCollection()">
+      <option value="">All genres</option>
+    </select>
+    <span class="count-badge" id="countBadge">0 albums</span>
+    <button class="btn" onclick="openModal()">+ Add album</button>
+  </div>
+
+  <!-- GRID / LIST TOGGLE + COLLECTION -->
+  <div class="grid-header">
+    <div class="grid-section-label" id="sectionLabel">Collection</div>
+    <div class="view-toggle">
+      <button class="view-btn active" id="gridViewBtn" onclick="setView('grid')">⊞</button>
+      <button class="view-btn" id="listViewBtn" onclick="setView('list')">☰</button>
+    </div>
+  </div>
+
+  <div id="collectionWrap"></div>
+
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-title">🎵 Add album</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Album title *</label>
+        <input type="text" class="form-input" id="inputTitle" placeholder="e.g. Kind of Blue" oninput="debounceLookup()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Artist *</label>
+        <input type="text" class="form-input" id="inputArtist" placeholder="e.g. Miles Davis" oninput="debounceLookup()">
+      </div>
+    </div>
+    <div class="lookup-status" id="lookupStatus"></div>
+    <div class="lookup-result clearfix" id="lookupResult">
+      <div id="lookupResultInner"></div>
+    </div>
+    <div class="form-group" style="margin-top:1rem;">
+      <label class="form-label">Personal notes (optional)</label>
+      <input type="text" class="form-input" id="inputNotes" placeholder="First heard at…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="addBtn" onclick="addAlbum()" disabled>Add to collection</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL DRAWER -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  <div id="drawerContent"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// =====================
+// STATE
+// =====================
+let collection = JSON.parse(localStorage.getItem('wax-collection') || '[]');
+let currentWeather = null;
+let currentView = 'grid';
+let pendingAlbumData = null;
+let lookupTimeout = null;
+let currentDrawerIndex = null;
+
+// =====================
+// SAVE / LOAD
+// =====================
+function save() {
+  localStorage.setItem('wax-collection', JSON.stringify(collection));
+}
+
+// =====================
+// WEATHER
+// =====================
+async function initWeather() {
+  if (!navigator.geolocation) {
+    setWeatherManual();
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async pos => {
+    try {
+      const { latitude: lat, longitude: lon } = pos.coords;
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,apparent_temperature&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=auto`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const c = data.current;
+      const revUrl = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
+      let cityName = '';
+      try {
+        const rev = await fetch(revUrl, { headers: { 'Accept-Language': 'en' } });
+        const rd = await rev.json();
+        cityName = rd.address?.city || rd.address?.town || rd.address?.county || '';
+      } catch(e) {}
+      currentWeather = {
+        temp: Math.round(c.temperature_2m),
+        feels: Math.round(c.apparent_temperature),
+        code: c.weathercode,
+        city: cityName,
+        season: getSeason(lat)
+      };
+      renderWeather();
+      renderSuggestions();
+    } catch(e) {
+      setWeatherManual();
+    }
+  }, () => setWeatherManual(), { timeout: 8000 });
+}
+
+function setWeatherManual() {
+  const month = new Date().getMonth();
+  currentWeather = {
+    temp: null, code: 0, city: 'your area',
+    season: getSeason(40)
+  };
+  renderWeather();
+  renderSuggestions();
+}
+
+function getSeason(lat) {
+  const m = new Date().getMonth();
+  const north = lat >= 0;
+  if (north) {
+    if (m >= 2 && m <= 4) return 'spring';
+    if (m >= 5 && m <= 7) return 'summer';
+    if (m >= 8 && m <= 10) return 'autumn';
+    return 'winter';
+  } else {
+    if (m >= 2 && m <= 4) return 'autumn';
+    if (m >= 5 && m <= 7) return 'winter';
+    if (m >= 8 && m <= 10) return 'spring';
+    return 'summer';
+  }
+}
+
+function weatherIcon(code) {
+  if (code === 0) return '☀️';
+  if (code <= 2) return '🌤️';
+  if (code <= 3) return '☁️';
+  if (code <= 49) return '🌫️';
+  if (code <= 59) return '🌦️';
+  if (code <= 69) return '🌧️';
+  if (code <= 79) return '❄️';
+  if (code <= 84) return '🌨️';
+  if (code <= 99) return '⛈️';
+  return '🌡️';
+}
+
+function weatherDesc(code) {
+  if (code === 0) return 'Clear sky';
+  if (code <= 2) return 'Partly cloudy';
+  if (code <= 3) return 'Overcast';
+  if (code <= 49) return 'Foggy';
+  if (code <= 59) return 'Drizzle';
+  if (code <= 69) return 'Rain';
+  if (code <= 79) return 'Snow';
+  if (code <= 84) return 'Snow showers';
+  if (code <= 99) return 'Thunderstorm';
+  return 'Unknown';
+}
+
+function renderWeather() {
+  const w = currentWeather;
+  if (!w) return;
+  const card = document.getElementById('weatherCard');
+  if (w.temp === null) {
+    card.innerHTML = `<div class="weather-loading">Weather unavailable</div>`;
+    return;
+  }
+  card.innerHTML = `
+    <div class="weather-main">
+      <span class="weather-icon">${weatherIcon(w.code)}</span>
+      <span class="weather-temp">${w.temp}°F</span>
+    </div>
+    <div class="weather-desc">${weatherDesc(w.code)}</div>
+    <div class="weather-loc">${w.city || 'Local area'} · ${w.season}</div>
+  `;
+}
+
+// =====================
+// MOOD + SUGGESTIONS
+// =====================
+const moodProfiles = [
+  {
+    match: w => w.code >= 95, // thunderstorm
+    mood: "There's a storm rolling in — time for something intense and cathartic.",
+    tags: ['metal', 'post-rock', 'industrial', 'noise rock', 'progressive rock', 'experimental'],
+    seasons: null
+  },
+  {
+    match: w => w.code >= 70 && w.code <= 79, // snow
+    mood: "Snow is falling — slow down with something hushed and introspective.",
+    tags: ['ambient', 'folk', 'acoustic', 'classical', 'chamber', 'neo-folk', 'singer-songwriter'],
+    seasons: null
+  },
+  {
+    match: w => w.code >= 60 && w.code <= 69, // rain
+    mood: "Rain against the windows calls for something moody and atmospheric.",
+    tags: ['jazz', 'blues', 'soul', 'ambient', 'post-rock', 'indie', 'bossa nova', 'lo-fi'],
+    seasons: null
+  },
+  {
+    match: w => w.code >= 50 && w.code <= 59, // drizzle
+    mood: "A grey drizzle — perfect for something pensive and warm.",
+    tags: ['folk', 'indie folk', 'singer-songwriter', 'jazz', 'soft rock', 'dream pop'],
+    seasons: null
+  },
+  {
+    match: w => w.code >= 40 && w.code <= 49, // fog
+    mood: "Fog outside — let something hazy and dreamlike fill the room.",
+    tags: ['shoegaze', 'ambient', 'dream pop', 'psychedelic', 'post-punk'],
+    seasons: null
+  },
+  {
+    match: w => w.code === 0 && w.season === 'summer' && w.temp > 75,
+    mood: "Hot summer sun — turn it up, feel alive, windows down.",
+    tags: ['funk', 'soul', 'reggae', 'disco', 'latin', 'r&b', 'rock', 'pop', 'hip-hop'],
+    seasons: ['summer']
+  },
+  {
+    match: w => w.code <= 2 && w.season === 'summer',
+    mood: "A warm, bright day — something light and joyful feels right.",
+    tags: ['pop', 'indie pop', 'bossa nova', 'beach', 'tropicalia', 'surf', 'ska'],
+    seasons: ['summer']
+  },
+  {
+    match: w => w.season === 'autumn' && w.code <= 3,
+    mood: "Golden autumn light — rich, layered sounds for a contemplative afternoon.",
+    tags: ['folk', 'americana', 'country', 'blues', 'classic rock', 'singer-songwriter', 'baroque pop'],
+    seasons: ['autumn']
+  },
+  {
+    match: w => w.season === 'spring' && w.code <= 2,
+    mood: "Spring has arrived — something fresh, hopeful, and gently uplifting.",
+    tags: ['indie', 'dream pop', 'chamber pop', 'jazz', 'new wave', 'pop', 'bossanova'],
+    seasons: ['spring']
+  },
+  {
+    match: w => w.season === 'winter' && w.code <= 3,
+    mood: "Cold and clear — a still winter's day deserves something deep and cinematic.",
+    tags: ['classical', 'ambient', 'post-rock', 'jazz', 'acoustic', 'neo-classical'],
+    seasons: ['winter']
+  },
+  {
+    match: () => true, // fallback
+    mood: "Whatever the weather, your collection has something for this moment.",
+    tags: [],
+    seasons: null
+  }
+];
+
+function getMoodProfile() {
+  if (!currentWeather) return moodProfiles[moodProfiles.length - 1];
+  for (const p of moodProfiles) {
+    if (p.match(currentWeather)) return p;
+  }
+  return moodProfiles[moodProfiles.length - 1];
+}
+
+function scoreAlbum(album, tags) {
+  if (!album.genres || tags.length === 0) return 0;
+  const aGenres = album.genres.map(g => g.toLowerCase());
+  let score = 0;
+  for (const tag of tags) {
+    for (const ag of aGenres) {
+      if (ag.includes(tag) || tag.includes(ag)) score++;
+    }
+  }
+  if (album.rating) score += album.rating * 0.5;
+  return score;
+}
+
+function renderSuggestions() {
+  const profile = getMoodProfile();
+  document.getElementById('moodText').textContent = profile.mood;
+  const sugBox = document.getElementById('suggestionAlbums');
+  if (collection.length === 0) {
+    sugBox.innerHTML = '<span class="suggestion-none">Add albums to get suggestions</span>';
+    return;
+  }
+  const scored = collection.map((a, i) => ({ album: a, idx: i, score: scoreAlbum(a, profile.tags) }));
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored.filter(x => x.score > 0).slice(0, 5);
+  if (top.length === 0) {
+    const random = scored.slice(0, 3);
+    sugBox.innerHTML = random.map(x =>
+      `<span class="suggestion-pill" onclick="highlightAlbum(${x.idx})">${x.album.title}</span>`
+    ).join('');
+  } else {
+    sugBox.innerHTML = top.map(x =>
+      `<span class="suggestion-pill" onclick="highlightAlbum(${x.idx})">${x.album.title}</span>`
+    ).join('');
+  }
+}
+
+function highlightAlbum(idx) {
+  filterCollection();
+  setTimeout(() => {
+    const el = document.querySelector(`[data-idx="${idx}"]`);
+    if (el) {
+      el.classList.add('highlighted');
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => el.classList.remove('highlighted'), 2000);
+    }
+  }, 50);
+}
+
+// =====================
+// ALBUM LOOKUP
+// Uses iTunes Search API (fetch, works on localhost & https)
+// Falls back to manual entry if unreachable
+// =====================
+function debounceLookup() {
+  clearTimeout(lookupTimeout);
+  const title = document.getElementById('inputTitle').value.trim();
+  const artist = document.getElementById('inputArtist').value.trim();
+  document.getElementById('addBtn').disabled = true;
+  pendingAlbumData = null;
+  if (title.length < 2 || artist.length < 2) {
+    document.getElementById('lookupStatus').textContent = '';
+    document.getElementById('lookupResult').classList.remove('show');
+    return;
+  }
+  showLookupStatus('Searching…', 'loading');
+  lookupTimeout = setTimeout(() => lookupAlbum(title, artist), 600);
+}
+
+async function itunesSearch(term, limit = 12) {
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&entity=album&limit=${limit}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('iTunes error');
+  return res.json();
+}
+
+async function lookupAlbum(title, artist) {
+  try {
+    const data = await itunesSearch(`${title} ${artist}`, 15);
+    const results = data.results || [];
+
+    if (!results.length) {
+      showLookupStatus('No exact match — searching by artist and title…', 'loading');
+      const [byArtist, byTitle] = await Promise.all([
+        itunesSearch(artist, 10).catch(() => ({ results: [] })),
+        itunesSearch(title, 8).catch(() => ({ results: [] }))
+      ]);
+      const seen = new Set();
+      const merged = [];
+      for (const r of [...(byArtist.results || []), ...(byTitle.results || [])]) {
+        if (!seen.has(r.collectionId)) { seen.add(r.collectionId); merged.push(r); }
+      }
+      if (!merged.length) {
+        showLookupStatus('Nothing found — you can add it manually below.', 'error');
+        enableManualAdd(title, artist);
+      } else {
+        showSimilarPicker(merged, title, artist);
+      }
+      return;
+    }
+
+    // Score to find best match
+    const tl = title.toLowerCase(), al = artist.toLowerCase();
+    const scored = results.map(r => {
+      const rt = (r.collectionName || '').toLowerCase().replace(/\s*\(.*?\)/g, '').trim();
+      const ra = (r.artistName || '').toLowerCase();
+      let score = 0;
+      if (rt === tl) score += 20;
+      else if (rt.startsWith(tl) || tl.startsWith(rt)) score += 12;
+      else if (rt.includes(tl) || tl.includes(rt)) score += 6;
+      if (ra === al) score += 20;
+      else if (ra.includes(al) || al.includes(ra.split(' ')[0])) score += 10;
+      return { r, score };
+    }).sort((a, b) => b.score - a.score);
+
+    const best = scored[0];
+    if (best.score >= 20) {
+      processItunesResult(best.r);
+    } else {
+      // Ambiguous — let user pick
+      showSimilarPicker(scored.map(x => x.r), title, artist);
+    }
+  } catch(e) {
+    // Likely a CORS/network error — show helpful message
+    showLookupStatus('⚠ Search unavailable — open via launch.py to enable lookup, or add manually.', 'error');
+    enableManualAdd(document.getElementById('inputTitle').value, document.getElementById('inputArtist').value);
+  }
+}
+
+function processItunesResult(r) {
+  const title  = r.collectionName || '';
+  const artist = r.artistName || '';
+  const year   = r.releaseDate ? r.releaseDate.slice(0, 4) : '';
+  const genre  = r.primaryGenreName || '';
+  const artUrl = (r.artworkUrl100 || '').replace('100x100bb', '600x600bb').replace('100x100', '600x600');
+  const country = r.country || '';
+
+  pendingAlbumData = { title, artist, year, genres: genre ? [genre] : [], artUrl, label: '', country };
+
+  document.getElementById('lookupResult').classList.add('show');
+  document.getElementById('lookupResultInner').innerHTML = `
+    ${artUrl ? `<img class="lookup-result-art" src="${artUrl}" onerror="this.style.display='none'">` : ''}
+    <div class="lookup-result-title">${escHTML(title)}</div>
+    <div class="lookup-result-artist">${escHTML(artist)}</div>
+    <div class="lookup-result-meta">${[year, genre, country].filter(Boolean).join(' · ')}</div>
+    <div class="clearfix"></div>
+  `;
+  showLookupStatus('✓ Found', 'success');
+  document.getElementById('addBtn').disabled = false;
+}
+
+function showLookupStatus(msg, type) {
+  const el = document.getElementById('lookupStatus');
+  el.className = `lookup-status ${type}`;
+  el.textContent = msg;
+}
+
+let similarReleases = [];
+let selectedSimilarIdx = null;
+
+function showSimilarPicker(results, origTitle, origArtist) {
+  similarReleases = results;
+  selectedSimilarIdx = null;
+  pendingAlbumData = null;
+  document.getElementById('addBtn').disabled = true;
+
+  const al = origArtist.toLowerCase();
+  const byArtistCount = results.filter(r => (r.artistName||'').toLowerCase().includes(al.split(' ')[0])).length;
+  let headerText = byArtistCount === results.length
+    ? `${results.length} albums by this artist`
+    : `${results.length} similar albums — pick the right one`;
+
+  showLookupStatus('No exact match — did you mean one of these?', 'error');
+  document.getElementById('lookupResult').classList.add('show');
+  document.getElementById('lookupResultInner').innerHTML = `
+    <div class="similar-header">${escHTML(headerText)}</div>
+    <div class="similar-list" id="similarList">
+      ${results.map((r, i) => {
+        const art = (r.artworkUrl100 || '').replace('100x100', '60x60');
+        const yr  = r.releaseDate ? r.releaseDate.slice(0, 4) : '';
+        return `<div class="similar-item" id="simItem${i}" onclick="selectSimilar(${i})">
+          <div class="similar-item-art">${art ? `<img src="${art}" onerror="this.parentElement.innerHTML='💿'">` : '💿'}</div>
+          <div class="similar-item-info">
+            <div class="similar-item-title">${escHTML(r.collectionName || '')}</div>
+            <div class="similar-item-artist">${escHTML(r.artistName || '')}</div>
+          </div>
+          <div class="similar-item-year">${yr}</div>
+          <div class="similar-check">✓</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="margin-top:0.6rem;font-size:0.72rem;color:var(--text3);font-family:'DM Mono',monospace;">
+      Or <span style="color:var(--accent);cursor:pointer;text-decoration:underline"
+        onclick="enableManualAdd(document.getElementById('inputTitle').value,document.getElementById('inputArtist').value);showLookupStatus('Adding manually.','error');document.getElementById('addBtn').disabled=false;document.getElementById('lookupResult').classList.remove('show');">add manually without online info</span>
+    </div>`;
+}
+
+function selectSimilar(idx) {
+  if (selectedSimilarIdx !== null) document.getElementById(`simItem${selectedSimilarIdx}`)?.classList.remove('selected');
+  selectedSimilarIdx = idx;
+  document.getElementById(`simItem${idx}`)?.classList.add('selected');
+  processItunesResult(similarReleases[idx]);
+}
+
+function showLookupError(msg) {
+  showLookupStatus(msg, 'error');
+  document.getElementById('lookupResult').classList.remove('show');
+}
+
+function enableManualAdd(title, artist) {
+  pendingAlbumData = { title, artist, year: '', genres: [], artUrl: '', label: '', country: '' };
+  document.getElementById('addBtn').disabled = false;
+}
+
+// =====================
+// ADD / DELETE ALBUM
+// =====================
+function openModal() {
+  document.getElementById('addModal').classList.add('open');
+  document.getElementById('inputTitle').focus();
+}
+
+function closeModal() {
+  document.getElementById('addModal').classList.remove('open');
+  document.getElementById('inputTitle').value = '';
+  document.getElementById('inputArtist').value = '';
+  document.getElementById('inputNotes').value = '';
+  document.getElementById('lookupStatus').textContent = '';
+  document.getElementById('lookupResult').classList.remove('show');
+  document.getElementById('lookupResultInner').innerHTML = '';
+  document.getElementById('addBtn').disabled = true;
+  pendingAlbumData = null;
+  similarReleases = [];
+  selectedSimilarIdx = null;
+}
+
+function addAlbum() {
+  if (!pendingAlbumData) return;
+  const notes = document.getElementById('inputNotes').value.trim();
+  const album = {
+    ...pendingAlbumData,
+    notes,
+    rating: 0,
+    listened: false,
+    addedAt: Date.now()
+  };
+  collection.unshift(album);
+  save();
+  closeModal();
+  renderCollection();
+  renderSuggestions();
+  updateGenreFilter();
+  showToast(`"${album.title}" added to collection`, 'success');
+}
+
+function deleteAlbum(e, idx) {
+  e.stopPropagation();
+  const album = collection[idx];
+  collection.splice(idx, 1);
+  save();
+  renderCollection();
+  renderSuggestions();
+  updateGenreFilter();
+  if (currentDrawerIndex === idx) closeDrawer();
+  showToast(`Removed "${album.title}"`, '');
+}
+
+// =====================
+// COLLECTION RENDER
+// =====================
+function setView(v) {
+  currentView = v;
+  document.getElementById('gridViewBtn').classList.toggle('active', v === 'grid');
+  document.getElementById('listViewBtn').classList.toggle('active', v === 'list');
+  renderCollection();
+}
+
+function filterCollection() {
+  renderCollection();
+}
+
+function getSorted() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+  const genre = document.getElementById('genreFilter').value.toLowerCase();
+  let items = collection.map((a, i) => ({ a, i }));
+  if (q) items = items.filter(({ a }) =>
+    a.title.toLowerCase().includes(q) ||
+    a.artist.toLowerCase().includes(q) ||
+    (a.genres || []).some(g => g.toLowerCase().includes(q))
+  );
+  if (genre) items = items.filter(({ a }) =>
+    (a.genres || []).some(g => g.toLowerCase().includes(genre))
+  );
+  switch(sort) {
+    case 'artist': items.sort((x, y) => x.a.artist.localeCompare(y.a.artist)); break;
+    case 'title': items.sort((x, y) => x.a.title.localeCompare(y.a.title)); break;
+    case 'year': items.sort((x, y) => (y.a.year || '') - (x.a.year || '')); break;
+    case 'rating': items.sort((x, y) => (y.a.rating || 0) - (x.a.rating || 0)); break;
+    default: items.sort((x, y) => (y.a.addedAt || 0) - (x.a.addedAt || 0));
+  }
+  return items;
+}
+
+function renderCollection() {
+  const items = getSorted();
+  const wrap = document.getElementById('collectionWrap');
+  document.getElementById('countBadge').textContent = `${collection.length} album${collection.length !== 1 ? 's' : ''}`;
+  document.getElementById('sectionLabel').textContent = items.length < collection.length
+    ? `${items.length} of ${collection.length} albums`
+    : 'Collection';
+
+  if (collection.length === 0) {
+    wrap.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">💿</div>
+        <div class="empty-title">Your collection is empty</div>
+        <div class="empty-sub">Start adding albums with just a title and artist — the rest is looked up automatically.</div>
+      </div>`;
+    return;
+  }
+
+  if (currentView === 'grid') {
+    wrap.innerHTML = `<div class="album-grid">${items.map(({ a, i }) => gridCard(a, i)).join('')}</div>`;
+  } else {
+    wrap.innerHTML = `<div class="album-list-view">${items.map(({ a, i }) => listRow(a, i)).join('')}</div>`;
+  }
+}
+
+function artHTML(album, size = 'full') {
+  if (album.artUrl) {
+    return `<img src="${album.artUrl}" alt="${escHTML(album.title)}" onerror="this.parentElement.innerHTML='💿'" loading="lazy">`;
+  }
+  return `💿`;
+}
+
+function gridCard(a, i) {
+  const stars = [1,2,3,4,5].map(s =>
+    `<span class="star${(a.rating||0)>=s?' active':''}" onclick="setRating(event,${i},${s})">★</span>`
+  ).join('');
+  return `
+    <div class="album-card" data-idx="${i}" onclick="openDrawer(${i})">
+      <div class="album-art">${artHTML(a)}</div>
+      <div class="album-info">
+        <div class="album-title-text">${escHTML(a.title)}</div>
+        <div class="album-artist-text">${escHTML(a.artist)}</div>
+        <div class="album-year">${a.year || '—'}</div>
+        <div class="rating-wrap">${stars}</div>
+        ${a.genres?.length ? `<div class="album-genres">${a.genres.slice(0,2).map(g => `<span class="genre-tag">${escHTML(g)}</span>`).join('')}</div>` : ''}
+      </div>
+      <div class="album-delete" onclick="deleteAlbum(event,${i})">✕</div>
+    </div>`;
+}
+
+function listRow(a, i) {
+  return `
+    <div class="album-row" data-idx="${i}" onclick="openDrawer(${i})">
+      <div class="row-art">${artHTML(a)}</div>
+      <div class="row-info">
+        <div class="row-title">${escHTML(a.title)}</div>
+        <div class="row-artist">${escHTML(a.artist)}</div>
+      </div>
+      <div class="row-meta">
+        <div>${a.year || '—'}</div>
+        <div style="color:var(--accent);font-size:0.7rem">${'★'.repeat(a.rating||0)}</div>
+      </div>
+      <button class="row-delete" onclick="deleteAlbum(event,${i})" title="Remove">✕</button>
+    </div>`;
+}
+
+// =====================
+// DETAIL DRAWER
+// =====================
+function openDrawer(idx) {
+  currentDrawerIndex = idx;
+  const a = collection[idx];
+  const stars = [1,2,3,4,5].map(s =>
+    `<span class="star${(a.rating||0)>=s?' active':''}" onclick="setRatingDrawer(${idx},${s})">★</span>`
+  ).join('');
+  document.getElementById('drawerContent').innerHTML = `
+    <div class="drawer-art">${artHTML(a)}</div>
+    <div class="drawer-title">${escHTML(a.title)}</div>
+    <div class="drawer-artist">${escHTML(a.artist)}</div>
+    <div class="rating-wrap">${stars}</div>
+    <div class="listened-wrap">
+      <div class="toggle-switch${a.listened?' on':''}" onclick="toggleListened(${idx})" id="listenedToggle">
+        <div class="toggle-knob"></div>
+      </div>
+      <span id="listenedLabel">${a.listened ? 'Listened' : 'Not yet listened'}</span>
+    </div>
+    <div class="drawer-meta-grid" style="margin-top:1rem">
+      <div class="drawer-meta-item"><div class="drawer-meta-label">Year</div><div class="drawer-meta-value">${a.year || '—'}</div></div>
+      <div class="drawer-meta-item"><div class="drawer-meta-label">Label</div><div class="drawer-meta-value" style="font-size:0.78rem">${escHTML(a.label || '—')}</div></div>
+      ${a.country ? `<div class="drawer-meta-item"><div class="drawer-meta-label">Country</div><div class="drawer-meta-value">${escHTML(a.country)}</div></div>` : ''}
+    </div>
+    ${a.genres?.length ? `<div class="drawer-genres">${a.genres.map(g => `<span class="drawer-genre-tag">${escHTML(g)}</span>`).join('')}</div>` : ''}
+    <div class="drawer-notes-label">Notes</div>
+    <textarea class="drawer-notes" placeholder="Your personal notes…" onchange="saveNotes(${idx}, this.value)">${escHTML(a.notes || '')}</textarea>
+    <div style="margin-top:1rem">
+      <button class="btn-ghost" style="width:100%;color:var(--danger);border-color:rgba(196,122,106,0.3)" onclick="deleteAlbum(event,${idx})">Remove from collection</button>
+    </div>
+  `;
+  document.getElementById('drawerOverlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+  currentDrawerIndex = null;
+}
+
+function toggleListened(idx) {
+  collection[idx].listened = !collection[idx].listened;
+  save();
+  const t = document.getElementById('listenedToggle');
+  const l = document.getElementById('listenedLabel');
+  if (t) {
+    t.classList.toggle('on', collection[idx].listened);
+    l.textContent = collection[idx].listened ? 'Listened' : 'Not yet listened';
+  }
+}
+
+function saveNotes(idx, val) {
+  collection[idx].notes = val;
+  save();
+}
+
+function setRatingDrawer(idx, val) {
+  collection[idx].rating = val;
+  save();
+  renderCollection();
+  openDrawer(idx);
+  renderSuggestions();
+}
+
+// =====================
+// RATING (grid)
+// =====================
+function setRating(e, idx, val) {
+  e.stopPropagation();
+  collection[idx].rating = val;
+  save();
+  renderCollection();
+  renderSuggestions();
+}
+
+// =====================
+// GENRE FILTER
+// =====================
+function updateGenreFilter() {
+  const all = new Set();
+  collection.forEach(a => (a.genres || []).forEach(g => all.add(g)));
+  const sel = document.getElementById('genreFilter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All genres</option>' +
+    [...all].sort().map(g => `<option value="${escHTML(g)}"${cur===g?' selected':''}>${escHTML(g)}</option>`).join('');
+}
+
+// =====================
+// TOAST
+// =====================
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast show ${type}`;
+  setTimeout(() => { t.classList.remove('show'); }, 2500);
+}
+
+// =====================
+// UTILS
+// =====================
+function escHTML(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Close modal on overlay click
+document.getElementById('addModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('addModal')) closeModal();
+});
+
+// Enter key in modal
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeDrawer(); }
+});
+
+// =====================
+// INIT
+// =====================
+initWeather();
+renderCollection();
+updateGenreFilter();
+</script>
+</body>
+</html>
