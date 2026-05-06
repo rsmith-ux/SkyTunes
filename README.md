@@ -2,7 +2,7 @@
 
 A personal album collection tracker that suggests what to listen to based on your current weather and season.
 
-**[▶ Open the app](https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/)**
+**[▶ Open the app](https://rsmith-ux.github.io/SkyTunes/)**
 
 ---
 
@@ -19,7 +19,7 @@ A personal album collection tracker that suggests what to listen to based on you
 1. Fork or clone this repo
 2. Go to **Settings → Pages**
 3. Under *Source*, select **Deploy from a branch** → `main` → `/ (root)`
-4. Hit Save — your site will be live at `https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/` within a minute
+4. Hit Save — your site will be live at `https://rsmith-ux.github.io/SkyTunes/` within a minute
 
 ## Local use
 
