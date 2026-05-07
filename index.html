@@ -844,20 +844,31 @@ function setRating(e, idx, val) {
 async function askAIForTemp(idx) {
   const a = collection[idx];
   
-  // Make sure this is your real key starting with AIza
-  const apiKey = 'AIzaSyAqXrNlqoUQpYvLW8_ZcQ2apeFpI1WSTj8'; 
+  // 1. Look for the key in the browser's local storage
+  let apiKey = localStorage.getItem('gemini_api_key');
+  
+  // 2. If it's not there, ask the user for it and save it!
+  if (!apiKey) {
+    apiKey = prompt("Enter your Gemini API Key to enable AI features.\\n\\n(It will be saved securely in your browser, NOT in the code!)");
+    
+    if (!apiKey) {
+      showToast('API Key is required to use AI.', 'error');
+      return;
+    }
+    // Save it so we don't have to ask again
+    localStorage.setItem('gemini_api_key', apiKey.trim());
+  }
   
   showToast('Asking AI for a vibe temp...', ''); 
   
-  const prompt = `You are a music expert. We are rating albums by "vibe temperature" in Fahrenheit (from 0 to 100). For example, a cold ambient winter album might be 25, a rainy jazz album might be 55, and a hot summer pop album might be 90. Based on the genre and mood of the album "${a.title}" by ${a.artist}, what is its vibe temperature? Reply with ONLY a 1 to 3 digit number.`;
+  const promptText = `You are a music expert. We are rating albums by "vibe temperature" in Fahrenheit (from 0 to 100). For example, a cold ambient winter album might be 25, a rainy jazz album might be 55, and a hot summer pop album might be 90. Based on the genre and mood of the album "${a.title}" by ${a.artist}, what is its vibe temperature? Reply with ONLY a 1 to 3 digit number.`;
 
   try {
-    // UPDATED: Using "gemini-1.5-flash-latest" to ensure compatibility
- const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
+        contents: [{ parts: [{ text: promptText }] }]
       })
     });
     
@@ -865,13 +876,18 @@ async function askAIForTemp(idx) {
     
     if (!res.ok) {
       console.error("Google API Error:", data);
-      showToast(`API Error: ${data.error?.message || 'Check the console for details.'}`, 'error');
+      
+      // If the API key is invalid or revoked, delete it from storage so the user can try again
+      if (res.status === 400 || res.status === 403) {
+        localStorage.removeItem('gemini_api_key');
+        showToast('Invalid API key. It has been cleared. Please try again.', 'error');
+      } else {
+        showToast(`API Error: ${data.error?.message || 'Check the console.'}`, 'error');
+      }
       return;
     }
     
-    // Safety Check: Sometimes the AI refuses to answer due to safety filters
     if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
-       console.error("AI blocked the request or returned empty:", data);
        showToast('AI refused or returned no data.', 'error');
        return;
     }
