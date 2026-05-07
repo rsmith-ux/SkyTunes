@@ -775,7 +775,17 @@ function openDrawer(idx) {
       ${a.listened ? `<button class="btn-ghost" style="margin-left:auto; padding:0.25rem 0.6rem; font-size:0.7rem;" onclick="logListen(event, ${idx})">🎧 Log Listen</button>` : ''}
     </div>
     <div class="drawer-meta-grid" style="margin-top:1.5rem">
-      <div class="drawer-meta-item">
+      <div class="drawer-meta-item" style="grid-column: span 2; display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <div class="drawer-meta-label">Vibe Temp</div>
+          <div class="drawer-meta-value">
+            <input type="number" style="width:50px; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--accent2); font-family:'DM Mono', monospace; font-size:1rem; outline:none;" value="${a.rating || ''}" placeholder="--" onchange="setRatingDrawer(${idx}, parseInt(this.value, 10))"> °F
+          </div>
+        </div>
+        <button class="btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem; border-color: var(--accent); color: var(--accent);" onclick="askAIForTemp(${idx})">
+           Ask AI
+        </button>
+      </div>
         <div class="drawer-meta-label">Vibe Temp</div>
         <div class="drawer-meta-value">
           <input type="number" style="width:50px; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--accent2); font-family:'DM Mono', monospace; font-size:1rem; outline:none;" value="${a.rating || ''}" placeholder="--" onchange="setRatingDrawer(${idx}, parseInt(this.value, 10))"> °F
@@ -830,6 +840,48 @@ function setRating(e, idx, val) {
 }
 
 // ---- GENRE FILTER ----
+  // ---- AI VIBE TEMPERATURE ----
+async function askAIForTemp(idx) {
+  const a = collection[idx];
+  
+  // 🛑 PASTE YOUR API KEY HERE:
+  const apiKey = AlzaSyAqXrNlqoUQpYvLW8_ZcQ2apeFp-l1WSTj8; 
+  
+  if (!apiKey || apiKey ===  AlzaSyAqXrNlqoUQpYvLW8_ZcQ2apeFp-l1WSTj8) {
+    showToast('Please add your Gemini API key in the code!', 'error');
+    return;
+  }
+
+  showToast('Asking AI for a vibe temp...', ''); // Shows a loading toast
+  
+  // We explicitly tell the AI to ONLY return a number so it plugs directly into our code
+  const prompt = `You are a music expert. We are rating albums by "vibe temperature" in Fahrenheit (from 0 to 100). For example, a cold ambient winter album might be 25, a rainy jazz album might be 55, and a hot summer pop album might be 90. Based on the genre and mood of the album "${a.title}" by ${a.artist}, what is its vibe temperature? Reply with ONLY a 1 to 3 digit number.`;
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+    
+    const data = await res.json();
+    // Extract the text the AI responded with
+    const tempText = data.candidates[0].content.parts[0].text.trim();
+    const tempNum = parseInt(tempText, 10);
+    
+    if (!isNaN(tempNum)) {
+      setRatingDrawer(idx, tempNum); // Reuses your existing save/render function
+      showToast(`AI suggested ${tempNum}°F!`, 'success');
+    } else {
+      showToast('AI returned something unexpected.', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Failed to connect to AI.', 'error');
+  }
+}
 function updateGenreFilter() {
   const all=new Set();
   collection.forEach(a=>(a.genres||[]).forEach(g=>all.add(g)));
