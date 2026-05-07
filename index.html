@@ -297,7 +297,7 @@
       <option value="artist">Artist A–Z</option>
       <option value="title">Title A–Z</option>
       <option value="year">Year</option>
-      <option value="rating">Rating</option>
+      <option value="rating">Temperature</option>
     </select>
     <select id="genreFilter" onchange="filterCollection()">
       <option value="">All genres</option>
@@ -437,15 +437,17 @@ function renderNowPlaying() {
     : '💿';
   document.getElementById('npTitle').textContent = a.title;
   document.getElementById('npByline').textContent = a.artist;
-  const filledStars = '★'.repeat(a.rating || 0);
-  const emptyStars = '☆'.repeat(5 - (a.rating || 0));
+  
+  // Replace stars with Temperature here:
+  const tempDisplay = a.rating ? `🌡️ ${a.rating}°F` : '';
+  
   document.getElementById('npMeta').innerHTML =
-    `<span class="np-stars">${filledStars}${emptyStars}</span>` +
+    (tempDisplay ? `<span class="np-stars" style="color:var(--accent2); font-family:'DM Mono', monospace;">${tempDisplay}</span>` : '') +
     (a.year ? `<span class="np-year">${escHTML(a.year)}</span>` : '');
+    
   bar.classList.add('visible');
   document.body.classList.add('has-now-playing');
 }
-
 function nowPlayingOpen() {
   if (nowPlayingIdx !== null) openDrawer(nowPlayingIdx);
 }
@@ -531,8 +533,22 @@ function scoreAlbum(album, tags) {
   if (!album.genres || tags.length===0) return 0;
   const ag = album.genres.map(g => g.toLowerCase());
   let score = 0;
-  for (const t of tags) for (const g of ag) { if (g.includes(t)||t.includes(g)) score++; }
-  if (album.rating) score += album.rating * 0.5;
+  
+  // 1. Score based on matching genre tags
+  for (const t of tags) {
+    for (const g of ag) { 
+      if (g.includes(t) || t.includes(g)) score += 2; 
+    }
+  }
+  
+  // 2. Score based on Temperature match
+  if (album.rating && currentWeather && currentWeather.temp !== null) {
+    const diff = Math.abs(album.rating - currentWeather.temp);
+    // Exact temp match gives +5 points. Scales down to 0 points if it's 25+ degrees off.
+    const tempScore = Math.max(0, 5 - (diff / 5));
+    score += tempScore;
+  }
+  
   return score;
 }
 
@@ -718,14 +734,16 @@ function artHTML(a) {
 }
 
 function gridCard(a, i) {
-  const stars=[1,2,3,4,5].map(s=>`<span class="star${(a.rating||0)>=s?' active':''}" onclick="setRating(event,${i},${s})">★</span>`).join('');
+  const tempDisplay = a.rating ? `<span style="color:var(--accent2); font-family:'DM Mono', monospace; font-size:0.75rem;">🌡️ ${a.rating}°F</span>` : '';
   return `<div class="album-card" data-idx="${i}" onclick="openDrawer(${i})">
     <div class="album-art">${artHTML(a)}</div>
     <div class="album-info">
       <div class="album-title-text">${escHTML(a.title)}</div>
       <div class="album-artist-text">${escHTML(a.artist)}</div>
-      <div class="album-year">${a.year||'—'}</div>
-      <div class="rating-wrap">${stars}</div>
+      <div class="album-year" style="display:flex; justify-content:space-between; align-items:center;">
+        <span>${a.year||'—'}</span>
+        ${tempDisplay}
+      </div>
       ${a.genres?.length?`<div class="album-genres">${a.genres.slice(0,2).map(g=>`<span class="genre-tag">${escHTML(g)}</span>`).join('')}</div>`:''}
     </div>
     <div class="album-delete" onclick="deleteAlbum(event,${i})">✕</div>
@@ -733,30 +751,36 @@ function gridCard(a, i) {
 }
 
 function listRow(a, i) {
+  const tempDisplay = a.rating ? `${a.rating}°F` : '--';
   return `<div class="album-row" data-idx="${i}" onclick="openDrawer(${i})">
     <div class="row-art">${artHTML(a)}</div>
     <div class="row-info"><div class="row-title">${escHTML(a.title)}</div><div class="row-artist">${escHTML(a.artist)}</div></div>
-    <div class="row-meta"><div>${a.year||'—'}</div><div style="color:var(--accent);font-size:0.7rem">${'★'.repeat(a.rating||0)}</div></div>
+    <div class="row-meta"><div>${a.year||'—'}</div><div style="color:var(--accent2);font-size:0.75rem; font-family:'DM Mono', monospace;">🌡️ ${tempDisplay}</div></div>
     <button class="row-delete" onclick="deleteAlbum(event,${i})" title="Remove">✕</button>
   </div>`;
 }
-
 // ---- DRAWER ----
 function openDrawer(idx) {
   currentDrawerIndex=idx;
   const a=collection[idx];
-  const stars=[1,2,3,4,5].map(s=>`<span class="star${(a.rating||0)>=s?' active':''}" onclick="setRatingDrawer(${idx},${s})">★</span>`).join('');
+  
   document.getElementById('drawerContent').innerHTML = `
     <div class="drawer-art">${artHTML(a)}</div>
     <div class="drawer-title">${escHTML(a.title)}</div>
     <div class="drawer-artist">${escHTML(a.artist)}</div>
-    <div class="rating-wrap">${stars}</div>
+    
    <div class="listened-wrap">
       <div class="toggle-switch${a.listened?' on':''}" onclick="toggleListened(${idx})" id="listenedToggle"><div class="toggle-knob"></div></div>
       <span id="listenedLabel">${a.listened?'Listened':'Not yet listened'}</span>
       ${a.listened ? `<button class="btn-ghost" style="margin-left:auto; padding:0.25rem 0.6rem; font-size:0.7rem;" onclick="logListen(event, ${idx})">🎧 Log Listen</button>` : ''}
     </div>
-    <div class="drawer-meta-grid" style="margin-top:1rem">
+    <div class="drawer-meta-grid" style="margin-top:1.5rem">
+      <div class="drawer-meta-item">
+        <div class="drawer-meta-label">Vibe Temp</div>
+        <div class="drawer-meta-value">
+          <input type="number" style="width:50px; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--accent2); font-family:'DM Mono', monospace; font-size:1rem; outline:none;" value="${a.rating || ''}" placeholder="--" onchange="setRatingDrawer(${idx}, parseInt(this.value, 10))"> °F
+        </div>
+      </div>
       <div class="drawer-meta-item"><div class="drawer-meta-label">Year</div><div class="drawer-meta-value">${a.year||'—'}</div></div>
       <div class="drawer-meta-item"><div class="drawer-meta-label">Label</div><div class="drawer-meta-value" style="font-size:0.78rem">${escHTML(a.label||'—')}</div></div>
       ${a.country?`<div class="drawer-meta-item"><div class="drawer-meta-label">Country</div><div class="drawer-meta-value">${escHTML(a.country)}</div></div>`:''}
@@ -792,7 +816,13 @@ function toggleListened(idx) {
 function saveNotes(idx, val) { collection[idx].notes=val; save(); }
 
 function setRatingDrawer(idx, val) {
-  collection[idx].rating=val; save(); renderCollection(); openDrawer(idx); renderSuggestions(); renderNowPlaying();
+  // If the user clears the input, save it as null, otherwise save the number
+  collection[idx].rating = isNaN(val) ? null : val; 
+  save(); 
+  renderCollection(); 
+  openDrawer(idx); 
+  renderSuggestions(); 
+  renderNowPlaying();
 }
 
 function setRating(e, idx, val) {
