@@ -554,13 +554,27 @@ function scoreAlbum(album, tags) {
 
 function renderSuggestions() {
   const profile = getMoodProfile();
-  document.getElementById('moodText').textContent = profile.mood;
-  const sugBox = document.getElementById('suggestionAlbums');
-  if (collection.length===0) { sugBox.innerHTML = '<span class="suggestion-none">Add albums to get suggestions</span>'; return; }
+  const wrap = document.getElementById('suggestionWrap');
+  const grid = document.getElementById('suggestionGrid');
+  
+  // If the collection is empty, keep the section hidden
+  if (collection.length === 0) { 
+    wrap.style.display = 'none'; 
+    return; 
+  }
+  
+  // Score the albums based on the weather/math
   const scored = collection.map((a,i) => ({ album:a, idx:i, score:scoreAlbum(a, profile.tags) })).sort((a,b) => b.score-a.score);
-  const top = scored.filter(x => x.score>0).slice(0,5);
-  const picks = top.length ? top : scored.slice(0,3);
-  sugBox.innerHTML = picks.map(x => `<span class="suggestion-pill" onclick="highlightAlbum(${x.idx})">${x.album.title}</span>`).join('');
+  
+  // Grab the top 4 matches, or just the first 4 albums if nothing matches perfectly
+  const top = scored.filter(x => x.score > 0).slice(0, 4);
+  const picks = top.length ? top : scored.slice(0, 4);
+  
+  // Render them into the grid using the full album cards
+  grid.innerHTML = picks.map(x => gridCard(x.album, x.idx)).join('');
+  
+  // Unhide the section!
+  wrap.style.display = 'block';
 }
 
 function highlightAlbum(idx) {
