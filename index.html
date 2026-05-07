@@ -265,14 +265,14 @@
     </div>
   </div>
 
-  <div class="suggestion-wrap">
-    <div class="suggestion-label">▸ Suggested for the mood</div>
-    <div class="suggestion-banner" id="suggestionBanner">
-      <div class="suggestion-mood">
-        <div class="suggestion-mood-text" id="moodText">Loading weather to suggest albums…</div>
-        <div class="suggestion-albums" id="suggestionAlbums"></div>
-      </div>
+<div id="suggestionWrap" class="suggestion-wrap" style="display:none">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+      <div class="grid-section-label" style="margin-bottom:0;">Suggested for the mood</div>
+      <button class="btn-ghost" id="aiCuratorBtn" style="padding: 0.3rem 0.7rem; font-size: 0.75rem; border-color: var(--accent); color: var(--accent);" onclick="generateAISuggestions()">
+         Ask AI
+      </button>
     </div>
+    <div class="album-grid" id="suggestionGrid"></div>
   </div>
 
  <div id="recentlyPlayedWrap" style="display: none; margin-bottom: 2.5rem;">
@@ -904,6 +904,91 @@ async function askAIForTemp(idx) {
   } catch (err) {
     console.error("Network/Code Error:", err);
     showToast('Failed to connect to AI.', 'error');
+  }
+}
+  // ---- AI CURATOR (SUGGESTIONS) ----
+async function generateAISuggestions() {
+  if (collection.length === 0) {
+    showToast('Your collection is empty!', 'error');
+    return;
+  }
+
+  // 1. Get the securely stored API key
+  let apiKey = localStorage.getItem('gemini_api_key');
+  if (!apiKey) {
+    apiKey = prompt("Enter your Gemini API Key to enable the AI Curator.\n\n(Saved securely in your browser!)");
+    if (!apiKey) { showToast('API Key required.', 'error'); return; }
+    localStorage.setItem('gemini_api_key', apiKey.trim());
+  }
+
+  const btn = document.getElementById('aiCuratorBtn');
+  btn.textContent = "✨ Thinking...";
+  btn.disabled = true;
+  showToast('Curating the perfect vibe...', '');
+
+  // 2. Build a compact list of your collection to send to the AI
+  const libraryData = collection.map((a, idx) => 
+    `[ID: ${idx}] "${a.title}" by ${a.artist} (Temp: ${a.rating||'Unknown'}, Genres: ${(a.genres||[]).join(', ')})`
+  ).join('\n');
+
+  // 3. Tell the AI the current weather context
+  const weatherContext = currentWeather && currentWeather.temp !== null
+    ? `The current weather outside is ${currentWeather.temp}°F and ${currentWeather.condition}.`
+    : `I don't know the weather right now, just pick a great cohesive vibe.`;
+
+  // 4. The strict Prompt
+  const promptText = `
+    You are an expert music curator. ${weatherContext}
+    
+    Here is my music library:
+    ${libraryData}
+    
+    Pick exactly the top 4 best albums from my library to listen to right now based on the weather and the album's vibe/temperature. 
+    You MUST reply ONLY with a valid JSON array containing the integer IDs of your 4 choices. Do not include markdown formatting, backticks, or text. 
+    Example of acceptable output: [2, 7, 0, 14]
+  `;
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+    });
+    
+    const data = await res.json();
+    
+    if (!res.ok) {
+      if (res.status === 400 || res.status === 403) localStorage.removeItem('gemini_api_key');
+      throw new Error(data.error?.message || 'API Error');
+    }
+
+    // 5. Parse the AI's JSON array
+    let reply = data.candidates[0].content.parts[0].text.trim();
+    // Strip markdown formatting if the AI disobeys the "no markdown" rule
+    reply = reply.replace(/```json/g, '').replace(/```/g, '').trim(); 
+    
+    const chosenIds = JSON.parse(reply);
+
+    if (!Array.isArray(chosenIds) || chosenIds.length === 0) throw new Error("Invalid AI response");
+
+    // 6. Render the AI's choices!
+    const grid = document.getElementById('suggestionGrid');
+    const wrap = document.getElementById('suggestionWrap');
+    
+    grid.innerHTML = chosenIds
+      .filter(id => collection[id]) // Make sure the ID actually exists
+      .map(id => gridCard(collection[id], id))
+      .join('');
+      
+    wrap.style.display = 'block';
+    showToast('AI Curator has updated your suggestions!', 'success');
+
+  } catch (err) {
+    console.error("AI Curator Error:", err);
+    showToast('Failed to get AI suggestions.', 'error');
+  } finally {
+    btn.textContent = " Ask AI";
+    btn.disabled = false;
   }
 }
 function updateGenreFilter() {
