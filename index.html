@@ -864,7 +864,7 @@ async function askAIForTemp(idx) {
   const promptText = `You are a music expert. We are rating albums by "vibe temperature" in Fahrenheit (from 0 to 100). For example, a cold ambient winter album might be 25, a rainy jazz album might be 55, and a hot summer pop album might be 90. Based on the genre and mood of the album "${a.title}" by ${a.artist}, what is its vibe temperature? Reply with ONLY a 1 to 3 digit number.`;
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
