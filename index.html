@@ -844,7 +844,7 @@ function setRating(e, idx, val) {
 async function askAIForTemp(idx) {
   const a = collection[idx];
   
-  // Make sure this starts with AIza (capital 'i'!) 
+  // Make sure this is your real key starting with AIza
   const apiKey = 'AIzaSyAqXrNlqoUQpYvLW8_ZcQ2apeFpI1WSTj8'; 
   
   showToast('Asking AI for a vibe temp...', ''); 
@@ -852,7 +852,8 @@ async function askAIForTemp(idx) {
   const prompt = `You are a music expert. We are rating albums by "vibe temperature" in Fahrenheit (from 0 to 100). For example, a cold ambient winter album might be 25, a rainy jazz album might be 55, and a hot summer pop album might be 90. Based on the genre and mood of the album "${a.title}" by ${a.artist}, what is its vibe temperature? Reply with ONLY a 1 to 3 digit number.`;
 
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    // UPDATED: Using "gemini-1.5-flash-latest" to ensure compatibility
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -862,14 +863,19 @@ async function askAIForTemp(idx) {
     
     const data = await res.json();
     
-    // NEW: If Google rejects the request, show EXACTLY why!
     if (!res.ok) {
       console.error("Google API Error:", data);
       showToast(`API Error: ${data.error?.message || 'Check the console for details.'}`, 'error');
       return;
     }
     
-    // If it succeeds, extract the text normally
+    // Safety Check: Sometimes the AI refuses to answer due to safety filters
+    if (!data.candidates || data.candidates.length === 0 || !data.candidates[0].content) {
+       console.error("AI blocked the request or returned empty:", data);
+       showToast('AI refused or returned no data.', 'error');
+       return;
+    }
+
     const tempText = data.candidates[0].content.parts[0].text.trim();
     const tempNum = parseInt(tempText, 10);
     
