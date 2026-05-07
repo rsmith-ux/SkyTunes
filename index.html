@@ -275,24 +275,7 @@
     </div>
   </div>
 
-  <div class="controls">
-    <div class="search-wrap">
-      <input type="text" id="searchInput" placeholder="Search your collection…" oninput="filterCollection()">
-    </div>
-    <select id="sortSelect" onchange="filterCollection()">
-      <option value="added">Recently added</option>
-      <option value="artist">Artist A–Z</option>
-      <option value="title">Title A–Z</option>
-      <option value="year">Year</option>
-      <option value="rating">Rating</option>
-    </select>
-    <select id="genreFilter" onchange="filterCollection()">
-      <option value="">All genres</option>
-    </select>
-    <span class="count-badge" id="countBadge">0 albums</span>
-    <button class="btn" onclick="openModal()">+ Add album</button>
-  </div>
-<div id="recentlyPlayedWrap" style="display: none; margin-bottom: 2.5rem;">
+ <div id="recentlyPlayedWrap" style="display: none; margin-bottom: 2.5rem;">
     <div class="grid-section-label" style="margin-bottom: 1rem;">▸ Recently Played</div>
     <div class="album-grid" id="recentlyPlayedGrid"></div>
   </div>
