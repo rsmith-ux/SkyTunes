@@ -840,21 +840,15 @@ function setRating(e, idx, val) {
 }
 
 // ---- GENRE FILTER ----
-  // ---- AI VIBE TEMPERATURE ----
+// ---- AI VIBE TEMPERATURE ----
 async function askAIForTemp(idx) {
   const a = collection[idx];
   
-  // 🛑 PASTE YOUR API KEY HERE:
+  // Make sure this starts with AIza (capital 'i'!) 
   const apiKey = 'AIzaSyAqXrNlqoUQpYvLW8_ZcQ2apeFpI1WSTj8'; 
   
-  if (!apiKey || apiKey ===  'YOUR API KEY HERE') {
-    showToast('Please add your Gemini API key in the code!', 'error');
-    return;
-  }
-
-  showToast('Asking AI for a vibe temp...', ''); // Shows a loading toast
+  showToast('Asking AI for a vibe temp...', ''); 
   
-  // We explicitly tell the AI to ONLY return a number so it plugs directly into our code
   const prompt = `You are a music expert. We are rating albums by "vibe temperature" in Fahrenheit (from 0 to 100). For example, a cold ambient winter album might be 25, a rainy jazz album might be 55, and a hot summer pop album might be 90. Based on the genre and mood of the album "${a.title}" by ${a.artist}, what is its vibe temperature? Reply with ONLY a 1 to 3 digit number.`;
 
   try {
@@ -867,18 +861,26 @@ async function askAIForTemp(idx) {
     });
     
     const data = await res.json();
-    // Extract the text the AI responded with
+    
+    // NEW: If Google rejects the request, show EXACTLY why!
+    if (!res.ok) {
+      console.error("Google API Error:", data);
+      showToast(`API Error: ${data.error?.message || 'Check the console for details.'}`, 'error');
+      return;
+    }
+    
+    // If it succeeds, extract the text normally
     const tempText = data.candidates[0].content.parts[0].text.trim();
     const tempNum = parseInt(tempText, 10);
     
     if (!isNaN(tempNum)) {
-      setRatingDrawer(idx, tempNum); // Reuses your existing save/render function
+      setRatingDrawer(idx, tempNum); 
       showToast(`AI suggested ${tempNum}°F!`, 'success');
     } else {
       showToast('AI returned something unexpected.', 'error');
     }
   } catch (err) {
-    console.error(err);
+    console.error("Network/Code Error:", err);
     showToast('Failed to connect to AI.', 'error');
   }
 }
