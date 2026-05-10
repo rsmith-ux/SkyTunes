@@ -562,19 +562,26 @@ function renderSuggestions() {
   var profile = getMoodProfile();
   var wrap = document.getElementById('suggestionWrap');
   var grid = document.getElementById('suggestionGrid');
-  if (collection.length === 0) { wrap.style.display = 'none'; return; }
-  // Add the filter here to remove wishlisted items before sorting
-  var scored = collection
-    .map(function(a, i) { return { album: a, idx: i, score: scoreAlbum(a, profile.tags) }; })
-    .filter(function(x) { return !x.album.wishlisted; }) // <-- ADDED LINE
+  
+  // 1. Grab the collection and immediately filter out the wishlisted items
+  var availableItems = collection
+    .map(function(a, i) { return { album: a, idx: i }; })
+    .filter(function(x) { return !x.album.wishlisted; });
+
+  // 2. If nothing is left (e.g., your whole collection is wishlisted), hide the panel
+  if (availableItems.length === 0) { wrap.style.display = 'none'; return; }
+
+  // 3. Score and sort ONLY the available items
+  var scored = availableItems
+    .map(function(x) { return { album: x.album, idx: x.idx, score: scoreAlbum(x.album, profile.tags) }; })
     .sort(function(a, b) { return b.score - a.score; });
-  var scored = collection.map(function(a, i) { return { album: a, idx: i, score: scoreAlbum(a, profile.tags) }; }).sort(function(a, b) { return b.score - a.score; });
+    
   var top = scored.filter(function(x) { return x.score > 0; }).slice(0, 4);
   var picks = top.length ? top : scored.slice(0, 4);
+  
   grid.innerHTML = picks.map(function(x) { return gridCard(x.album, x.idx); }).join('');
   wrap.style.display = 'block';
 }
-
 function highlightAlbum(idx) {
   filterCollection();
   setTimeout(function() {
