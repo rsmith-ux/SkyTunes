@@ -64,7 +64,21 @@
   .main-col { min-width: 0; }
 
   /* SIDEBAR PANELS */
-  .sidebar-panel { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--card); padding: 1.1rem 1rem 1rem; }
+  .sidebar-panel {
+  background: var(--surface2);
+  border-radius: var(--card);
+  padding: 1.1rem 1rem 1rem;
+}
+
+#suggestionWrap {
+  border: 1px solid rgba(120, 200, 255, 0.35);
+  box-shadow: 0 0 30px rgba(120, 200, 255, 0.1), inset 0 0 20px rgba(120, 200, 255, 0.04);
+}
+
+#recentlyPlayedWrap {
+  border: 1px solid rgba(200, 120, 255, 0.35);
+  box-shadow: 0 0 30px rgba(200, 120, 255, 0.1), inset 0 0 20px rgba(200, 120, 255, 0.04);
+}
   .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.8rem; }
   .grid-section-label { font-size: 0.8rem; font-weight: 600; letter-spacing: -0.01em; color: #f5f3ef; }
 
