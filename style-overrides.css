@@ -223,9 +223,9 @@ body::before { opacity: 0.65; }
   min-width: 0;
   background: none;
 }
-#suggestionGrid .album-title-text  { font-size: 0.8rem; font-weight: 500; color: #f0ede8; }
-#suggestionGrid .album-artist-text { font-size: 0.67rem; margin-top: 0.12rem; }
-#suggestionGrid .album-year        { font-size: 0.6rem;  margin-top: 0.22rem; }
+#suggestionGrid .album-title-text  { font-size: 0.73rem; font-weight: 500; color: #f0ede8; }
+#suggestionGrid .album-artist-text { font-size: 0.64rem; margin-top: 0.12rem; }
+#suggestionGrid .album-year        { font-size: 0.56rem;  margin-top: 0.22rem; }
 #suggestionGrid .album-genres      { margin-top: 0.28rem; }
 #suggestionGrid .genre-tag         { font-size: 0.55rem; padding: 0.08rem 0.4rem; }
 #suggestionGrid .album-delete      { display: none; }
