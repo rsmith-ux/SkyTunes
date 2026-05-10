@@ -725,9 +725,9 @@ function getSorted() {
 function renderCollection() {
   renderRecentlyPlayed();
   var allItems = getSorted();
-  var items = currentTab === 'wishlist'
+ var items = currentTab === 'wishlist'
     ? allItems.filter(function(x) { return x.a.wishlisted; })
-    : allItems;
+    : allItems.filter(function(x) { return !x.a.wishlisted; }); // <-- Only shows non-wishlisted albums
   var wrap = document.getElementById('collectionWrap');
   document.getElementById('countBadge').textContent = collection.length + ' album' + (collection.length !== 1 ? 's' : '');
   document.getElementById('sectionLabel').textContent = items.length < collection.length ? items.length + ' of ' + collection.length + ' albums' : 'Collection';
