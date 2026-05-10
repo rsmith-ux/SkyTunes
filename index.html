@@ -599,16 +599,18 @@ function highlightAlbum(idx) {
   }, 50);
 }
 
-// ---- API & LOOKUP ----
+// ---- API & LOOKUP (MUSICBRAINZ) ----
 let lookupTimeout;
 let pendingAlbumData = null;
 
-// INCREASED LIMIT: default to 50 instead of 12 to ensure we don't miss albums
-async function itunesSearch(term, limit=50) {
-  // Use '+' for spaces which iTunes search API heavily prefers
-  const cleanTerm = term.trim().replace(/\s+/g, '+');
-  const res = await fetch(`https://itunes.apple.com/search?term=${cleanTerm}&media=music&entity=album&limit=${limit}`);
-  if (!res.ok) throw new Error('iTunes error');
+// Queries the open MusicBrainz database
+async function musicBrainzSearch(title, artist) {
+  const query = encodeURIComponent(`${title} ${artist}`);
+  // inc=tags grabs the genre metadata
+  const res = await fetch(`https://musicbrainz.org/ws/2/release-group?query=${query}&fmt=json&inc=tags`, {
+    headers: { 'User-Agent': 'WaxAndWeather/1.0 (testing local app)' } // MB requires a user-agent
+  });
+  if (!res.ok) throw new Error('MusicBrainz API error');
   return res.json();
 }
 
@@ -620,87 +622,57 @@ function debounceLookup() {
   btn.disabled = true;
   pendingAlbumData = null;
   
-  if (title.length<2 || artist.length<2) {
+  if (title.length < 2 || artist.length < 2) {
     document.getElementById('lookupStatus').textContent = '';
     document.getElementById('lookupResult').classList.remove('show');
     return;
   }
   
-  showLookupStatus('Searching…', 'loading');
-  // INCREASED DEBOUNCE: 800ms to prevent hitting iTunes rate limits while typing
-  lookupTimeout = setTimeout(() => lookupAlbum(title, artist), 800);
+  showLookupStatus('Searching database...', 'loading');
+  // 1000ms debounce because MusicBrainz strict limit is 1 request per second
+  lookupTimeout = setTimeout(() => lookupAlbum(title, artist), 1000);
 }
 
 async function lookupAlbum(title, artist) {
   try {
-    // Utility to clean punctuation for better matching
-    const cleanStr = str => str.toLowerCase().replace(/[^\w\s]/g, '').trim();
-    const tl = cleanStr(title), al = cleanStr(artist);
-    
-    // INCREASED LIMIT: 25 for combined search
-    const data = await itunesSearch(`${title} ${artist}`, 25);
-    let results = data.results || [];
+    const data = await musicBrainzSearch(title, artist);
+    let results = data['release-groups'] || [];
 
     if (!results.length) {
-      showLookupStatus('No exact match — searching by artist and title…','loading');
-      // INCREASED LIMITS: 50 for both artist and title fallbacks
-      const [byArtist, byTitle] = await Promise.all([
-        itunesSearch(artist, 50).catch(()=>({results:[]})), 
-        itunesSearch(title, 50).catch(()=>({results:[]}))
-      ]);
-      const merged = [...(byArtist.results||[]), ...(byTitle.results||[])];
-      const unique = new Map();
-      merged.forEach(r => unique.set(r.collectionId, r));
-      results = Array.from(unique.values());
-    }
-
-    if (!results.length) {
-      showLookupStatus('Could not find that album. Check spelling.','error');
-      pendingAlbumData = { title, artist, art: '', year: new Date().getFullYear(), genres: [] };
-      document.getElementById('addBtn').disabled = false;
+      showLookupStatus('Nothing found — you can add it manually below.', 'error');
+      // Assumes you have an enableManualAdd() function from previous fixes
+      if (typeof enableManualAdd === 'function') enableManualAdd(title, artist);
       return;
     }
 
-    const scored = results.map(r => {
-      // SMARTER STRIPPING: removes (Deluxe), [Remastered], and " - Bonus Tracks"
-      let rawTitle = (r.collectionName || '').toLowerCase()
-          .replace(/\s*[\(\[].*?[\)\]]/g, '')
-          .split('-')[0];
-          
-      const rt = cleanStr(rawTitle);
-      const ra = cleanStr(r.artistName || '');
-      let score = 0;
-      
-      if(rt === tl) score += 20; 
-      else if(rt.startsWith(tl) || tl.startsWith(rt)) score += 12; 
-      else if(rt.includes(tl) || tl.includes(rt)) score += 6;
-      
-      if(ra === al) score += 20; 
-      else if(ra.includes(al) || al.includes(ra.split(' ')[0])) score += 10;
-      
-      return {r, score};
-    }).sort((a,b) => b.score - a.score);
+    // MusicBrainz naturally sorts by relevance, so [0] is almost always the best match
+    const bestMatch = results[0];
+    
+    // Map the MusicBrainz JSON to match the exact properties your iTunes function expects
+    const mappedResult = {
+      collectionId: bestMatch.id,
+      collectionName: bestMatch.title,
+      artistName: bestMatch['artist-credit']?.[0]?.name || artist,
+      // Use the Cover Art Archive to grab the image based on the MusicBrainz ID
+      artworkUrl100: `https://coverartarchive.org/release-group/${bestMatch.id}/front-500`,
+      releaseDate: bestMatch['first-release-date'] || new Date().getFullYear().toString(),
+      // Grab the first tag for genre, fallback to 'Unknown'
+      primaryGenreName: bestMatch.tags && bestMatch.tags.length > 0 ? bestMatch.tags[0].name : 'Unknown'
+    };
 
-    const best = scored[0];
-    // Slightly lower threshold (16 instead of 20) to auto-process if we have decent partial matches across both fields
-    if (best && best.score >= 16) {
-      processAlbumResult(best.r);
-    } else if (scored.length > 0) {
-      showSimilarPicker(scored.slice(0,5).map(s => s.r));
+    // Pass the mapped object right into your existing app logic!
+    if (typeof processItunesResult === 'function') {
+      processItunesResult(mappedResult);
     } else {
-      showLookupStatus('Could not find that album. Check spelling.','error');
-      pendingAlbumData = { title, artist, art: '', year: new Date().getFullYear(), genres: [] };
-      document.getElementById('addBtn').disabled = false;
+      processAlbumResult(mappedResult); // Fallback depending on what your function is named
     }
 
   } catch (err) {
     console.error("Lookup Error:", err);
-    showLookupStatus('Network error while searching.', 'error');
-    pendingAlbumData = { title, artist, art: '', year: new Date().getFullYear(), genres: [] };
-    document.getElementById('addBtn').disabled = false;
+    showLookupStatus('⚠ Search failed — check your connection, or add manually.', 'error');
+    if (typeof enableManualAdd === 'function') enableManualAdd(document.getElementById('inputTitle').value, document.getElementById('inputArtist').value);
   }
 }
-
 function showLookupStatus(msg, type) {
   const st = document.getElementById('lookupStatus');
   st.textContent = msg;
