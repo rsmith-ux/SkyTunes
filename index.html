@@ -284,7 +284,7 @@
       <div id="suggestionWrap" class="sidebar-panel" style="display:none">
         <div class="panel-header">
           <div class="grid-section-label">Suggested for the mood</div>
-          <button class="btn-ghost" id="aiCuratorBtn" style="padding:0.3rem 0.7rem; font-size:0.75rem; border-color:var(--accent); color:var(--accent);" onclick="generateAISuggestions()">✨ Ask AI</button>
+          <button class="btn-ghost" id="aiCuratorBtn" style="padding:0.3rem 0.7rem; font-size:0.75rem; border-color:var(--accent); color:var(--accent);" onclick="generateAISuggestions()">Ask AI</button>
         </div>
         <div id="suggestionGrid"></div>
       </div>
@@ -301,17 +301,19 @@
     <!-- MAIN COLUMN -->
     <div class="main-col">
 
-    <div class="grid-header">
+ <div class="grid-header">
   <div class="tab-bar">
     <button class="tab-btn active" id="tabCollection" onclick="setTab('collection')">Collection</button>
     <button class="tab-btn" id="tabWishlist" onclick="setTab('wishlist')">Wishlist</button>
   </div>
+  
+  <div id="sectionLabel" class="grid-section-label" style="margin-left: auto; margin-right: 1rem;">Collection</div>
+  
   <div class="view-toggle">
     <button class="view-btn active" id="gridViewBtn" onclick="setView('grid')">⊞</button>
     <button class="view-btn" id="listViewBtn" onclick="setView('list')">☰</button>
   </div>
 </div>
-
       <div class="controls">
         <div class="search-wrap">
           <input type="text" id="searchInput" placeholder="Search your collection…" oninput="filterCollection()">
@@ -786,7 +788,7 @@ function openDrawer(idx) {
     '</div>' +
     '<div class="drawer-meta-grid" style="margin-top:1.5rem">' +
       '<div class="drawer-meta-item" style="grid-column:span 2;display:flex;align-items:center;justify-content:space-between;">' +
-        '<button class="btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.75rem;border-color:var(--accent);color:var(--accent);" onclick="askAIForTemp(' + idx + ')">✨ Ask AI</button>' +
+        '<button class="btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.75rem;border-color:var(--accent);color:var(--accent);" onclick="askAIForTemp(' + idx + ')">Ask AI</button>' +
         '<div class="drawer-meta-label">Vibe Temp</div>' +
         '<div class="drawer-meta-value"><input type="number" style="width:50px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--accent2);font-family:\'DM Mono\',monospace;font-size:1rem;outline:none;" value="' + (a.rating || '') + '" placeholder="--" onchange="setRatingDrawer(' + idx + ',parseInt(this.value,10))"> °F</div>' +
       '</div>' +
@@ -878,7 +880,7 @@ function generateAISuggestions() {
     localStorage.setItem('gemini_api_key', apiKey.trim());
   }
   var btn = document.getElementById('aiCuratorBtn');
-  btn.textContent = '✨ Thinking...'; btn.disabled = true;
+  btn.textContent = 'Thinking...'; btn.disabled = true;
   showToast('Curating the perfect vibe...', '');
   var libraryData = collection.map(function(a, idx) { return '[ID: ' + idx + '] "' + a.title + '" by ' + a.artist + ' (Temp: ' + (a.rating||'Unknown') + ', Genres: ' + (a.genres||[]).join(', ') + ')'; }).join('\n');
   var weatherContext = currentWeather && currentWeather.temp !== null ? 'The current weather is ' + currentWeather.temp + '°F and ' + weatherDesc(currentWeather.code) + '.' : 'Pick a great cohesive vibe.';
@@ -904,7 +906,7 @@ function generateAISuggestions() {
     showToast('AI Curator updated your suggestions!', 'success');
   })
   .catch(function(err) { showToast('Failed to get AI suggestions.', 'error'); console.error(err); })
-  .finally(function() { btn.textContent = '✨ Ask AI'; btn.disabled = false; });
+  .finally(function() { btn.textContent = 'Ask AI'; btn.disabled = false; });
 }
 
 // ---- TOAST ----
