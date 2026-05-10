@@ -383,7 +383,7 @@ let pendingAlbumData = null;
 let lookupTimeout = null;
 let currentDrawerIndex = null;
 let nowPlayingIdx = null;
-
+let similarReleases = []; let selectedSimilarIdx = null;
 function save() {
   localStorage.setItem('wax-collection', JSON.stringify(collection));
 }
@@ -679,7 +679,34 @@ function showLookupStatus(msg, type) {
     res.classList.remove('show');
   }
 }
+function processItunesResult(result) {
+  const year = result.releaseDate ? result.releaseDate.substring(0, 4) : '';
+  const genres = result.primaryGenreName && result.primaryGenreName !== 'Unknown'
+    ? [result.primaryGenreName] : [];
 
+  pendingAlbumData = {
+    id: result.collectionId || Date.now(),
+    title: result.collectionName,
+    artist: result.artistName,
+    year,
+   artUrl: result.artworkUrl100 || '',
+    genres,
+    label: result.label || '',
+    country: result.country || ''
+  };
+
+  document.getElementById('lookupResult').classList.add('show');
+  document.getElementById('lookupResultInner').innerHTML = `
+    <img class="lookup-result-art" src="${escHTML(pendingAlbumData.artUrl)}"
+         onerror="this.style.display='none'" alt="">
+    <div class="lookup-result-title">${escHTML(pendingAlbumData.title)}</div>
+    <div class="lookup-result-artist">${escHTML(pendingAlbumData.artist)}</div>
+    <div class="lookup-result-meta">${year}${genres.length ? ' · ' + genres.join(', ') : ''}</div>
+    <div style="clear:both"></div>`;
+
+  showLookupStatus('✓ Found — review and add below', 'success');
+  document.getElementById('addBtn').disabled = false;
+}
 // ---- ADD / DELETE ----
 function openModal() { document.getElementById('addModal').classList.add('open'); document.getElementById('inputTitle').focus(); }
 function closeModal() {
