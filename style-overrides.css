@@ -224,7 +224,7 @@ body::before { display: none; }
   font-family: 'DM Sans', sans-serif;
   letter-spacing: 0;
 }
-#suggestionGrid .album-year   { display: none; }
+/*#suggestionGrid .album-year   { display: none; }
 #suggestionGrid .album-genres { display: none; }
 #suggestionGrid .album-delete { display: none; }
 
@@ -272,7 +272,7 @@ body::before { display: none; }
 }
 #recentlyPlayedGrid .album-title-text  { font-size: 0.67rem; font-weight: 600; }
 #recentlyPlayedGrid .album-artist-text { font-size: 0.59rem; color: rgba(255,255,255,0.35); }
-#recentlyPlayedGrid .album-year        { display: none; }
+/*#recentlyPlayedGrid .album-year        { display: none; }
 #recentlyPlayedGrid .album-genres      { display: none; }
 
 /* ═══════════════════════════════════════
