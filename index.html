@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+<link rel="stylesheet" href="style-overrides.css">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -791,11 +792,6 @@ function openDrawer(idx) {
     <div class="drawer-meta-grid" style="margin-top:1.5rem">
       <div class="drawer-meta-item" style="grid-column: span 2; display: flex; align-items: center; justify-content: space-between;">
         <div>
-          <div class="drawer-meta-label">Vibe Temp</div>
-          <div class="drawer-meta-value">
-            <input type="number" style="width:50px; background:transparent; border:none; border-bottom:1px solid var(--border); color:var(--accent2); font-family:'DM Mono', monospace; font-size:1rem; outline:none;" value="${a.rating || ''}" placeholder="--" onchange="setRatingDrawer(${idx}, parseInt(this.value, 10))"> °F
-          </div>
-        </div>
         <button class="btn-ghost" style="padding: 0.3rem 0.7rem; font-size: 0.75rem; border-color: var(--accent); color: var(--accent);" onclick="askAIForTemp(${idx})">
            Ask AI
         </button>
