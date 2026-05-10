@@ -563,6 +563,11 @@ function renderSuggestions() {
   var wrap = document.getElementById('suggestionWrap');
   var grid = document.getElementById('suggestionGrid');
   if (collection.length === 0) { wrap.style.display = 'none'; return; }
+  // Add the filter here to remove wishlisted items before sorting
+  var scored = collection
+    .map(function(a, i) { return { album: a, idx: i, score: scoreAlbum(a, profile.tags) }; })
+    .filter(function(x) { return !x.album.wishlisted; }) // <-- ADDED LINE
+    .sort(function(a, b) { return b.score - a.score; });
   var scored = collection.map(function(a, i) { return { album: a, idx: i, score: scoreAlbum(a, profile.tags) }; }).sort(function(a, b) { return b.score - a.score; });
   var top = scored.filter(function(x) { return x.score > 0; }).slice(0, 4);
   var picks = top.length ? top : scored.slice(0, 4);
@@ -882,8 +887,11 @@ function generateAISuggestions() {
   var btn = document.getElementById('aiCuratorBtn');
   btn.textContent = 'Thinking...'; btn.disabled = true;
   showToast('Curating the perfect vibe...', '');
-  var libraryData = collection.map(function(a, idx) { return '[ID: ' + idx + '] "' + a.title + '" by ' + a.artist + ' (Temp: ' + (a.rating||'Unknown') + ', Genres: ' + (a.genres||[]).join(', ') + ')'; }).join('\n');
-  var weatherContext = currentWeather && currentWeather.temp !== null ? 'The current weather is ' + currentWeather.temp + '°F and ' + weatherDesc(currentWeather.code) + '.' : 'Pick a great cohesive vibe.';
+ var libraryData = collection
+    .map(function(a, idx) { return { a: a, idx: idx }; })
+    .filter(function(x) { return !x.a.wishlisted; }) // <-- ADDED LINE
+    .map(function(x) { return '[ID: ' + x.idx + '] "' + x.a.title + '" by ' + x.a.artist + ' (Temp: ' + (x.a.rating||'Unknown') + ', Genres: ' + (x.a.genres||[]).join(', ') + ')'; })
+    .join('\n');  var weatherContext = currentWeather && currentWeather.temp !== null ? 'The current weather is ' + currentWeather.temp + '°F and ' + weatherDesc(currentWeather.code) + '.' : 'Pick a great cohesive vibe.';
   var promptText = 'You are an expert music curator. ' + weatherContext + '\n\nMy library:\n' + libraryData + '\n\nPick exactly 4 best albums to listen to right now. Reply ONLY with a valid JSON array of integer IDs. Example: [2, 7, 0, 14]';
   fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=' + apiKey, {
     method: 'POST',
