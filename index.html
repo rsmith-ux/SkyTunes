@@ -267,6 +267,8 @@
 <div class="app">
 
   <div class="header">
+    <button id="loginBtn" class="tab-btn" onclick="login()">Log in with Google</button>
+<button id="logoutBtn" class="tab-btn" onclick="logout()" style="display: none;">Log Out</button>
     <div class="brand">
       <div class="brand-title">Wax <span>&</span> Weather</div>
       <div class="brand-sub">Album Collection Tracker</div>
@@ -402,8 +404,44 @@ var nowPlayingIdx = null;
 var similarReleases = [];
 var selectedSimilarIdx = null;
 
-function save() {
-  localStorage.setItem('wax-collection', JSON.stringify(collection));
+// Replace your old save() function with this asynchronous one
+async function save() {
+  // If they aren't logged in, don't try to save to the cloud
+  if (!window.currentUser) {
+    showToast("Please log in to save your collection.", "");
+    return; 
+  }
+
+  try {
+    // Save to a document named after their secure User ID
+    await window.setDoc(window.doc(window.db, "users", window.currentUser.uid), {
+      albums: collection
+    });
+    console.log("Collection saved securely!");
+  } catch (e) {
+    console.error("Error saving: ", e);
+  }
+}
+
+async function loadFromCloud() {
+  if (!window.currentUser) return;
+
+  try {
+    // Load from the document named after their secure User ID
+    const docSnap = await window.getDoc(window.doc(window.db, "users", window.currentUser.uid));
+    
+    if (docSnap.exists()) {
+      collection = docSnap.data().albums || [];
+      renderCollection(); 
+      showToast("Welcome back! Collection loaded.", "success");
+    } else {
+      // It's a brand new user!
+      collection = [];
+      renderCollection();
+    }
+  } catch (e) {
+    console.error("Error loading: ", e);
+  }
 }
 
 // ---- RECENTLY PLAYED ----
@@ -965,6 +1003,68 @@ initWeather();
 renderCollection();
 updateGenreFilter();
 renderNowPlaying();
+</script>
+  <script type="module">
+  // 1. Import Firebase core and Firestore (the database)
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+  // 2. Paste YOUR config object here
+  const firebaseConfig = {
+    apiKey: "AIzaSyb-pik3Z_ej04Wu805_JCCWfQ7U0ypyTiw",
+    authDomain: "wax-and-weather.firebaseapp.com",
+    projectId: "wax-and-weather",
+    storageBucket: "wax-and-weather.firebasestorage.app",
+    messagingSenderId: "612387371669",
+    appId: "1:612387371669:web:94f32a6f1c7d8b8375399c"
+  };
+
+  // 3. Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  // 4. Expose the database and Firestore functions to your global window 
+  // so your existing JavaScript functions can use them
+  window.db = db;
+  window.setDoc = setDoc;
+  window.doc = doc;
+  window.getDoc = getDoc;
+    // 5. Create Login and Logout functions
+  window.login = async function() {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Login failed", error);
+      showToast("Login failed. Try again.", "error"); // uses your existing toast notification!
+    }
+  };
+
+  window.logout = async function() {
+    await signOut(auth);
+  };
+
+  // 6. Listen for Auth State Changes (The Magic Step)
+  // This fires automatically when the page loads, and whenever someone logs in or out.
+  window.currentUser = null;
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      // User is logged in
+      window.currentUser = user;
+      document.getElementById('loginBtn').style.display = 'none';
+      document.getElementById('logoutBtn').style.display = 'block';
+      loadFromCloud(); // Fetch THEIR specific albums
+    } else {
+      // User is logged out
+      window.currentUser = null;
+      document.getElementById('loginBtn').style.display = 'block';
+      document.getElementById('logoutBtn').style.display = 'none';
+      
+      // Clear the screen so the next person doesn't see the previous person's albums
+      collection = [];
+      renderCollection(); 
+    }
+  });
 </script>
 </body>
 </html>
