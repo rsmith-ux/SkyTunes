@@ -239,6 +239,9 @@
   .np-dismiss:hover { color: var(--text2); }
   body.has-now-playing .app { padding-bottom: 5.5rem; }
 
+  .tab-bar { display: flex; gap: 0.25rem; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--pill); padding: 0.2rem; }
+.tab-btn { background: transparent; border: none; border-radius: var(--pill); color: rgba(255,255,255,0.35); font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600; padding: 0.35rem 1rem; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.tab-btn.active { background: var(--surface3); color: #f0ede8; }
   /* TOAST */
   .toast { position: fixed; bottom: 5.5rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface3); border: 1px solid rgba(255,255,255,0.13); border-radius: var(--pill); padding: 0.6rem 1.25rem; font-size: 0.82rem; font-family: 'DM Mono', monospace; z-index: 200; opacity: 0; transition: all 0.2s; white-space: nowrap; }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -298,13 +301,16 @@
     <!-- MAIN COLUMN -->
     <div class="main-col">
 
-      <div class="grid-header">
-        <div class="grid-section-label" id="sectionLabel">Collection</div>
-        <div class="view-toggle">
-          <button class="view-btn active" id="gridViewBtn" onclick="setView('grid')">⊞</button>
-          <button class="view-btn" id="listViewBtn" onclick="setView('list')">☰</button>
-        </div>
-      </div>
+    <div class="grid-header">
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tabCollection" onclick="setTab('collection')">Collection</button>
+    <button class="tab-btn" id="tabWishlist" onclick="setTab('wishlist')">Wishlist</button>
+  </div>
+  <div class="view-toggle">
+    <button class="view-btn active" id="gridViewBtn" onclick="setView('grid')">⊞</button>
+    <button class="view-btn" id="listViewBtn" onclick="setView('list')">☰</button>
+  </div>
+</div>
 
       <div class="controls">
         <div class="search-wrap">
@@ -716,10 +722,18 @@ function getSorted() {
 
 function renderCollection() {
   renderRecentlyPlayed();
-  var items = getSorted(), wrap = document.getElementById('collectionWrap');
+var allItems = getSorted();
+var items = currentTab === 'wishlist'
+  ? allItems.filter(function(x) { return x.a.wishlisted; })
+  : allItems;
+var wrap = document.getElementById('collectionWrap');
   document.getElementById('countBadge').textContent = collection.length + ' album' + (collection.length !== 1 ? 's' : '');
   document.getElementById('sectionLabel').textContent = items.length < collection.length ? items.length + ' of ' + collection.length + ' albums' : 'Collection';
-  if (collection.length === 0) {
+if (currentTab === 'wishlist' && items.length === 0) {
+  wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">✦</div><div class="empty-title">Your wishlist is empty</div><div class="empty-sub">Open any album and toggle Wishlisted to save it here.</div></div>';
+  return;
+}
+if (collection.length === 0) {
     wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">💿</div><div class="empty-title">Your collection is empty</div><div class="empty-sub">Start adding albums with just a title and artist — the rest is looked up automatically.</div></div>';
     return;
   }
@@ -764,6 +778,8 @@ function openDrawer(idx) {
     '<div class="drawer-title">' + escHTML(a.title) + '</div>' +
     '<div class="drawer-artist">' + escHTML(a.artist) + '</div>' +
     '<div class="listened-wrap">' +
+    '<div class="toggle-switch' + (a.wishlisted ? ' on' : '') + '" onclick="toggleWishlist(' + idx + ')" id="wishlistToggle" style="background:' + (a.wishlisted ? '#9b6dff' : '') + '; border-color:' + (a.wishlisted ? '#9b6dff' : '') + '"><div class="toggle-knob"></div></div>' +
+  '<span>Wishlisted</span>' +
       '<div class="toggle-switch' + (a.listened ? ' on' : '') + '" onclick="toggleListened(' + idx + ')" id="listenedToggle"><div class="toggle-knob"></div></div>' +
       '<span id="listenedLabel">' + (a.listened ? 'Listened' : 'Not yet listened') + '</span>' +
       (a.listened ? '<button class="btn-ghost" style="margin-left:auto;padding:0.25rem 0.6rem;font-size:0.7rem;" onclick="logListen(event,' + idx + ')">🎧 Log Listen</button>' : '') +
@@ -904,6 +920,25 @@ function escHTML(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+  var currentTab = 'collection';
+
+function setTab(tab) {
+  currentTab = tab;
+  document.getElementById('tabCollection').classList.toggle('active', tab === 'collection');
+  document.getElementById('tabWishlist').classList.toggle('active', tab === 'wishlist');
+  // hide/show the sort and genre controls — wishlist has its own filtered view
+  document.getElementById('sortSelect').style.display = tab === 'collection' ? '' : 'none';
+  document.getElementById('genreFilter').style.display = tab === 'collection' ? '' : 'none';
+  renderCollection();
+}
+
+function toggleWishlist(idx) {
+  collection[idx].wishlisted = !collection[idx].wishlisted;
+  save();
+  openDrawer(idx);
+  renderCollection();
+  showToast(collection[idx].wishlisted ? 'Added to wishlist ✦' : 'Removed from wishlist', collection[idx].wishlisted ? 'success' : '');
+}
 // ---- EVENTS ----
 document.getElementById('addModal').addEventListener('click', function(e) { if (e.target === document.getElementById('addModal')) closeModal(); });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeModal(); closeDrawer(); } });
