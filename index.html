@@ -1031,12 +1031,12 @@ const auth = getAuth(app);
   window.doc = doc;
   window.getDoc = getDoc;
     // 5. Create Login and Logout functions
-  window.login = async function() {
+window.login = async function() {
     try {
       await signInWithPopup(auth, provider);
     } catch (error) {
-      console.error("Login failed", error);
-      showToast("Login failed. Try again.", "error"); // uses your existing toast notification!
+      // This will pop a box up on your screen with the exact error code!
+      alert("FIREBASE ERROR:\n" + error.code + "\n\n" + error.message);
     }
   };
 
