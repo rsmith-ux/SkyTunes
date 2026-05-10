@@ -603,12 +603,10 @@ function highlightAlbum(idx) {
 let lookupTimeout;
 let pendingAlbumData = null;
 
-// Queries the open MusicBrainz database
 async function musicBrainzSearch(title, artist) {
   const query = encodeURIComponent(`${title} ${artist}`);
-  // inc=tags grabs the genre metadata
   const res = await fetch(`https://musicbrainz.org/ws/2/release-group?query=${query}&fmt=json&inc=tags`, {
-    headers: { 'User-Agent': 'WaxAndWeather/1.0 (testing local app)' } // MB requires a user-agent
+    headers: { 'User-Agent': 'WaxAndWeather/1.0 (testing local app)' }
   });
   if (!res.ok) throw new Error('MusicBrainz API error');
   return res.json();
@@ -629,7 +627,6 @@ function debounceLookup() {
   }
   
   showLookupStatus('Searching database...', 'loading');
-  // 1000ms debounce because MusicBrainz strict limit is 1 request per second
   lookupTimeout = setTimeout(() => lookupAlbum(title, artist), 1000);
 }
 
@@ -640,44 +637,47 @@ async function lookupAlbum(title, artist) {
 
     if (!results.length) {
       showLookupStatus('Nothing found — you can add it manually below.', 'error');
-      // Assumes you have an enableManualAdd() function from previous fixes
       if (typeof enableManualAdd === 'function') enableManualAdd(title, artist);
       return;
     }
 
-    // MusicBrainz naturally sorts by relevance, so [0] is almost always the best match
     const bestMatch = results[0];
     
-    // Map the MusicBrainz JSON to match the exact properties your iTunes function expects
+    // Map MusicBrainz format to match iTunes format
     const mappedResult = {
       collectionId: bestMatch.id,
       collectionName: bestMatch.title,
       artistName: bestMatch['artist-credit']?.[0]?.name || artist,
-      // Use the Cover Art Archive to grab the image based on the MusicBrainz ID
       artworkUrl100: `https://coverartarchive.org/release-group/${bestMatch.id}/front-500`,
       releaseDate: bestMatch['first-release-date'] || new Date().getFullYear().toString(),
-      // Grab the first tag for genre, fallback to 'Unknown'
       primaryGenreName: bestMatch.tags && bestMatch.tags.length > 0 ? bestMatch.tags[0].name : 'Unknown'
     };
 
-    // Pass the mapped object right into your existing app logic!
     if (typeof processItunesResult === 'function') {
       processItunesResult(mappedResult);
-    } else {
-      processAlbumResult(mappedResult); // Fallback depending on what your function is named
+    } else if (typeof processAlbumResult === 'function') {
+      processAlbumResult(mappedResult); 
     }
 
   } catch (err) {
     console.error("Lookup Error:", err);
     showLookupStatus('⚠ Search failed — check your connection, or add manually.', 'error');
-    if (typeof enableManualAdd === 'function') enableManualAdd(document.getElementById('inputTitle').value, document.getElementById('inputArtist').value);
+    if (typeof enableManualAdd === 'function') {
+        enableManualAdd(document.getElementById('inputTitle').value, document.getElementById('inputArtist').value);
+    }
   }
 }
+
 function showLookupStatus(msg, type) {
   const st = document.getElementById('lookupStatus');
-  st.textContent = msg;
-  st.className = `lookup-status ${type}`;
-  document.getElementById('lookupResult').classList.remove('show');
+  if(st) {
+    st.textContent = msg;
+    st.className = `lookup-status ${type}`;
+  }
+  const res = document.getElementById('lookupResult');
+  if(res) {
+    res.classList.remove('show');
+  }
 }
 
 // ---- ADD / DELETE ----
