@@ -84,7 +84,7 @@
 
   /* SUGGESTION GRID — landscape rows */
   #suggestionGrid { display: flex; flex-direction: column; gap: 0.45rem; }
-  #suggestionGrid .album-card { display: flex; flex-direction: row; height: 60px; border-radius: 12px; background: var(--surface3); border: 1px solid transparent; overflow: hidden; box-shadow: none; transition: background 0.15s, border-color 0.15s, transform 0.15s; }
+  #suggestionGrid .album-card { content-visibility: auto; display: flex; flex-direction: row; height: 60px; border-radius: 12px; background: var(--surface3); border: 1px solid transparent; overflow: hidden; box-shadow: none; transition: background 0.15s, border-color 0.15s, transform 0.15s; }
   #suggestionGrid .album-card:hover { border-color: rgba(212,168,83,0.3); transform: translateX(2px); }
   #suggestionGrid .album-art { width: 60px; min-width: 60px; height: 60px; aspect-ratio: unset; border-radius: 0; font-size: 1.3rem; flex-shrink: 0; }
   #suggestionGrid .album-art img { border-radius: 0; object-fit: cover; width: 100%; height: 100%; }
@@ -318,7 +318,7 @@
 </div>
       <div class="controls">
         <div class="search-wrap">
-          <input type="text" id="searchInput" placeholder="Search your collection…" oninput="filterCollection()">
+         <input type="text" id="searchInput" placeholder="Search your collection…" oninput="debounceFilter()">
         </div>
         <select id="sortSelect" onchange="filterCollection()">
           <option value="added">Recently added</option>
@@ -402,6 +402,13 @@ var lookupTimeout = null;
 var currentDrawerIndex = null;
 var nowPlayingIdx = null;
 var similarReleases = [];
+  var _imgCache = {};
+function preloadArt(url) {
+  if (!url || _imgCache[url]) return;
+  _imgCache[url] = true;
+  var img = new Image();
+  img.src = url;
+}
 var selectedSimilarIdx = null;
 
 // Replace your old save() function with this asynchronous one
@@ -732,6 +739,7 @@ function addAlbum() {
   if (!pendingAlbumData) return;
   var notes = document.getElementById('inputNotes').value.trim();
   collection.unshift(Object.assign({}, pendingAlbumData, { notes: notes, rating: 0, listened: false, addedAt: Date.now() }));
+  preloadArt(pendingAlbumData.artUrl);
   save(); closeModal(); renderCollection(); renderSuggestions(); updateGenreFilter();
   showToast('"' + pendingAlbumData.title + '" added to collection', 'success');
 }
@@ -793,14 +801,19 @@ function renderCollection() {
   else wrap.innerHTML = '<div class="album-list-view">' + items.map(function(x) { return listRow(x.a, x.i); }).join('') + '</div>';
 }
 
-function artHTML(a) {
-  return a.artUrl ? '<img src="' + a.artUrl + '" alt="' + escHTML(a.title) + '" onerror="this.parentElement.innerHTML=\'💿\'" loading="lazy">' : '💿';
+function artHTML(a, size) {
+  if (!a.artUrl) return '💿';
+  // MusicBrainz Cover Art Archive supports -250 and -500 suffixes
+  var src = (size === 'small' && a.artUrl.includes('coverartarchive.org'))
+    ? a.artUrl.replace('-500', '-250')
+    : a.artUrl;
+  return '<img src="' + src + '" alt="' + escHTML(a.title) + '" loading="lazy" decoding="async" onerror="this.style.display=\'none\';this.parentElement.dataset.broken=\'1\';this.parentElement.innerHTML+=\'💿\'">';
 }
 
 function gridCard(a, i) {
   var tempDisplay = a.rating ? '<span style="color:var(--accent2);font-family:\'DM Mono\',monospace;font-size:0.75rem;">🌡️ ' + a.rating + '°F</span>' : '';
   return '<div class="album-card" data-idx="' + i + '" onclick="openDrawer(' + i + ')">' +
-    '<div class="album-art">' + artHTML(a) + '</div>' +
+   '<div class="album-art">' + artHTML(a, 'small') + '</div>' +
     '<div class="album-info">' +
       '<div class="album-title-text">' + escHTML(a.title) + '</div>' +
       '<div class="album-artist-text">' + escHTML(a.artist) + '</div>' +
@@ -814,7 +827,7 @@ function gridCard(a, i) {
 function listRow(a, i) {
   var tempDisplay = a.rating ? a.rating + '°F' : '--';
   return '<div class="album-row" data-idx="' + i + '" onclick="openDrawer(' + i + ')">' +
-    '<div class="row-art">' + artHTML(a) + '</div>' +
+    '<div class="row-art">' + artHTML(a, 'small') + '</div>' +
     '<div class="row-info"><div class="row-title">' + escHTML(a.title) + '</div><div class="row-artist">' + escHTML(a.artist) + '</div></div>' +
     '<div class="row-meta"><div>' + (a.year||'—') + '</div><div style="color:var(--accent2);font-size:0.75rem;font-family:\'DM Mono\',monospace;">🌡️ ' + tempDisplay + '</div></div>' +
     '<button class="row-delete" onclick="deleteAlbum(event,' + i + ')" title="Remove">✕</button>' +
@@ -974,7 +987,11 @@ function escHTML(str) {
   if (!str) return '';
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
+var _filterTimeout;
+function debounceFilter() {
+  clearTimeout(_filterTimeout);
+  _filterTimeout = setTimeout(filterCollection, 180);
+}
   var currentTab = 'collection';
 
 function setTab(tab) {
